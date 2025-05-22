@@ -28,6 +28,17 @@ export default function TabLayout() {
           ),
         }}
       />
+
+      <Tabs.Screen
+        name="home"
+        options={{
+          title: "Home",
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="home" size={24} color={color} />
+          ),
+        }}
+      />
+
       {/* Add more tabs as needed */}
       <Tabs.Screen
         name="profile"
@@ -38,6 +49,8 @@ export default function TabLayout() {
           ),
         }}
       />
+
+      
     </Tabs>
   );
 }
