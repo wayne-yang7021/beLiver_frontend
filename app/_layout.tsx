@@ -1,17 +1,19 @@
-// app/_layout.tsx
 import { Stack } from 'expo-router';
-import "../global.css";
+import '../global.css';
 
 export default function RootLayout() {
   return (
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: 'transparent' },
         animation: 'fade',
+        contentStyle: { backgroundColor: 'transparent' },
       }}
     >
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="index" />      {/* 導向 login */}
+      <Stack.Screen name="login" />
+      <Stack.Screen name="register" />
+      <Stack.Screen name="(tabs)" />
     </Stack>
   );
 }

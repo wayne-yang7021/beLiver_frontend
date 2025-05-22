@@ -120,11 +120,12 @@ export default function AddProjectModal({
 
           {/* Upload File Button */}
           <TouchableOpacity
-            className="mt-4 p-4 rounded-xl border-2 border-dashed border-pink-300 bg-pink-100"
+            className="mt-4 p-4 rounded-xl border-2 border-dashed border-[#F29389] bg-[#F8C8C3] bg-opacity-20"
             onPress={pickDocument}
           >
-            <Text className="text-center text-pink-800 font-bold">
-              + Upload another file (.docx or .pdf)
+            <Text className="text-center text-[#5E1526] font-semibold">
+              + Upload another file
+               (.docx or .pdf)
             </Text>
           </TouchableOpacity>
 
@@ -137,9 +138,9 @@ export default function AddProjectModal({
               contentContainerStyle={{ paddingBottom: 10 }}
               renderItem={({ item }) => (
                 <View
-                  className={`rounded-xl px-4 py-2 mb-2 max-w-[75%] ${
+                  className={`rounded-xl px-4 py-2 mb-2 max-w-[75%]${
                     item.from === 'user'
-                      ? 'bg-pink-300 self-end'
+                      ? 'bg-[#F29389] self-end'
                       : 'bg-gray-100 self-start'
                   }`}
                 >

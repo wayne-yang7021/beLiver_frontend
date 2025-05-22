@@ -3,27 +3,41 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-export default function Login() {
+export default function Register() {
   const router = useRouter();
+
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const onLogin = () => {
-    // TODO: auth logic here
+  const onRegister = () => {
+    // TODO: Add validation and backend integration
     router.push('/(tabs)/home');
   };
 
   return (
     <View className="flex-1 bg-[#F8C8C3] justify-center px-8">
-      {/* Liver Icon */}
+      {/* Logo */}
       <View className="items-center mb-8">
         <Image
           source={require('../assets/images/liver.png')}
           className="w-24 h-24"
           style={{ resizeMode: 'contain' }}
         />
-        <Text className="text-3xl font-bold text-[#5E1526] mt-4">Welcome Back!</Text>
-        <Text className="text-[#772343]">Login to your project space</Text>
+        <Text className="text-3xl font-bold text-[#5E1526] mt-4">Create Account</Text>
+        <Text className="text-[#772343]">Join your productivity space</Text>
+      </View>
+
+      {/* Name */}
+      <View className="mb-4 bg-white rounded-2xl flex-row items-center px-4 py-3 shadow">
+        <Feather name="user" size={20} color="#F29389" />
+        <TextInput
+          className="ml-3 flex-1 text-[#5E1526]"
+          placeholder="Your Name"
+          placeholderTextColor="#999"
+          value={name}
+          onChangeText={setName}
+        />
       </View>
 
       {/* Email */}
@@ -52,19 +66,19 @@ export default function Login() {
         />
       </View>
 
-      {/* Login Button */}
+      {/* Register Button */}
       <TouchableOpacity
         className="bg-[#F29389] py-4 rounded-full items-center shadow-lg"
-        onPress={onLogin}
+        onPress={onRegister}
       >
-        <Text className="text-white font-bold text-lg">Login</Text>
+        <Text className="text-white font-bold text-lg">Register</Text>
       </TouchableOpacity>
 
-      {/* Register */}
+      {/* Go to Login */}
       <View className="mt-6 items-center">
-        <Text className="text-[#772343]">Dont have an account?</Text>
-        <TouchableOpacity onPress={() => router.push('/')}>
-          <Text className="text-[#5E1526] font-semibold mt-1">Create one here</Text>
+        <Text className="text-[#772343]">Already have an account?</Text>
+        <TouchableOpacity onPress={() => router.push('/login')}>
+          <Text className="text-[#5E1526] font-semibold mt-1">Go back to Login</Text>
         </TouchableOpacity>
       </View>
     </View>

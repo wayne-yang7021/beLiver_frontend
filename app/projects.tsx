@@ -126,13 +126,13 @@ export default function Projects (){
                     data={projects}
                     className="px-6 mt-6"
                     renderItem={({ item }) => (
-                    <View className="bg-white rounded-2xl p-4 mb-4">
-                        <View className="flex-row justify-between items-center">
-                            <Text className="text-lg font-bold text-gray-800">{item.title}</Text>
-                            <Text className="text-gray-600">{item.dueDate}</Text>
+                        <View className="bg-white rounded-2xl p-4 mb-4">
+                            <View className="flex-row justify-between items-center">
+                                <Text className="text-lg font-bold text-gray-800">{item.title}</Text>
+                                <Text className="text-gray-600">{item.dueDate}</Text>
+                            </View>
+                            {renderProgressBar(item.currentTask, item.progress)}
                         </View>
-                        {renderProgressBar(item.currentTask, item.progress)}
-                    </View>
                     )}
                     keyExtractor={item => item.id}
                 />
