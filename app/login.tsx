@@ -13,6 +13,7 @@ export default function Login() {
     router.push('/(tabs)/home');
   };
 
+
   return (
     <View className="flex-1 bg-[#F8C8C3] justify-center px-8">
       {/* Liver Icon */}

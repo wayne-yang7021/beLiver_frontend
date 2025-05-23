@@ -1,14 +1,13 @@
-import { StackNavigationProp } from '@react-navigation/stack';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { FlatList, Image, Text, TouchableOpacity, View } from 'react-native';
 import AddProjectModal from '../components/AddProjectModal';
 
 // Define navigation types
-type RootStackParamList = {
-  Home: undefined;
-  Projects: undefined;
-};
+// type RootStackParamList = {
+//   Home: undefined;
+//   Projects: undefined;
+// };
 
 interface Project {
   id: string;
@@ -17,8 +16,11 @@ interface Project {
   currentTask: string;
   progress: number;
 }
+export const options = {
+  animation: 'slide_from_bottom', // 或 slide_from_right、fade...
+};
 
-type ProjectsScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Projects'>;
+// type ProjectsScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Projects'>;
 
 const initialProjects: Project[] = [
   { id: '1', title: 'SAD Final Project', dueDate: 'Apr. 22', currentTask: 'SAD Figma', progress: 60 },
