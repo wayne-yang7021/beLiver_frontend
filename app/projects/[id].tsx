@@ -1,0 +1,249 @@
+import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { Alert, Platform, SafeAreaView, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Circle } from 'react-native-progress';
+
+type Milestone = {
+  milestone_id: string;
+  milestone_name: string;
+  ddl: string;
+  progress: number;
+};
+
+type Project = {
+  project_name: string;
+  project_summary: string;
+  project_start_time: string;
+  project_end_time: string;
+  estimated_loading: number;
+  milestones: Milestone[];
+};
+
+const mockProject: Project = {
+  project_name: 'SAD Final Project',
+  project_summary: 'System Analysis and Design final project presentation for a real-world information system.',
+  project_start_time: '2025-05-15T09:00:00',
+  project_end_time: '2025-05-30T18:00:00',
+  estimated_loading: 12,
+  milestones: [
+    { milestone_id: 'ms001', milestone_name: 'Research Phase', ddl: '2025-05-20T18:00:00', progress: 1.0 },
+    { milestone_id: 'ms002', milestone_name: 'Design Phase', ddl: '2025-05-24T18:00:00', progress: 0.6 },
+    { milestone_id: 'ms003', milestone_name: 'Implementation Phase', ddl: '2025-05-27T18:00:00', progress: 0.0 },
+    { milestone_id: 'ms004', milestone_name: 'Final Report Submission', ddl: '2025-05-30T18:00:00', progress: 0.0 },
+  ],
+};
+
+export default function ProjectManagementScreen() {
+  const { id } = useLocalSearchParams();
+  const router = useRouter();
+  const [project, setProject] = useState<Project | null>(null);
+
+  // Editing State
+  const [isEditing, setIsEditing] = useState(false);
+  const [name, setName] = useState(mockProject.project_name);
+  const [summary, setSummary] = useState(mockProject.project_summary);
+  // const [startDate, setStartDate] = useState<Date>(new Date());
+  // const [endDate, setEndDate] = useState<Date>(new Date());
+  const [deadline, setDeadline] = useState(new Date(mockProject.project_end_time));
+  const [showDeadlinePicker, setShowDeadlinePicker] = useState(false);
+
+  useEffect(() => {
+    setProject(mockProject);
+  }, [id]);
+
+  const handleSave = () => {
+    if (!name.trim() || !summary.trim()) {
+      alert('Fields cannot be empty.');
+      return;
+    }
+
+    setProject((prev) => prev && ({
+      ...prev,
+      project_name: name,
+      project_summary: summary,
+      project_deadline: deadline.toISOString(),
+    }));
+
+    setShowDeadlinePicker(false);
+    setIsEditing(false);
+  };
+
+  if (!project) return null;
+
+  const done = project.milestones.filter((m) => m.progress === 1.0);
+  const inProgress = project.milestones.filter((m) => m.progress > 0 && m.progress < 1);
+  const todo = project.milestones.filter((m) => m.progress === 0);
+
+  return (
+    <SafeAreaView className="flex-1 bg-white">
+      <ScrollView className="flex-1 px-4">
+        {/* Header */}
+        <View className="flex-row justify-between items-center pt-12 pb-4">
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="black" />
+        </TouchableOpacity>
+        <View className="flex-row items-center gap-2">
+          {isEditing && (
+            <TouchableOpacity
+              onPress={() => {
+                Alert.alert(
+                  'Delete Project',
+                  'Are you sure you want to delete this project?',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Delete',
+                      style: 'destructive',
+                      onPress: () => {
+                        setProject(null);
+                        router.back();
+                      },
+                    },
+                  ]
+                );
+              }}
+            >
+              <Ionicons name="trash-outline" size={24} color="red" />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity onPress={() => { setIsEditing(!isEditing); setShowDeadlinePicker(!showDeadlinePicker); }}>
+            <Ionicons name={isEditing ? 'close-outline' : 'create-outline'} size={24} color="black" />
+          </TouchableOpacity>
+        </View>
+        
+      </View>
+
+        {/* Circle */}
+        <View className="items-center mt-2 mb-6 relative">
+          <Circle size={240} progress={project.estimated_loading / 100} color="#f8c8c3" thickness={16} unfilledColor="#eee" borderWidth={0} showsText={false} />
+          <View className="absolute items-center justify-center h-60 w-60">
+            <Text className="mt-2 text-gray-600 font-medium">Estimated Loading</Text>
+            <Text className="text-2xl font-bold">{project.estimated_loading}</Text>
+            <Text className="text-sm text-gray-600">Hours</Text>
+          </View>
+        </View>
+
+        {!isEditing && <Text className="text-2xl font-bold text-center mb-4">{project.project_name}</Text>}
+
+        {/* Summary and DDL */}
+        <View className="bg-gray-100 p-4 rounded-xl mb-6">
+          <View className="flex-col justify-between mb-2 items-start gap-2">
+            {!isEditing && <Text className="font-semibold text-gray-700">Project Summary</Text>}
+            {isEditing && 
+            <View className="flex-row items-center mb-2">
+              <Text className="text-sm text-gray-500 mr-2">Project Name:</Text> 
+              <TextInput
+                className="text-sm text-center bg-white border rounded-lg p-2"
+                value={name}
+                onChangeText={setName}
+                placeholder="Project Name"
+              />
+            </View>}
+            <View className="flex-row items-center">
+              <Text className="text-sm text-gray-500 mr-2">Deadline:</Text> 
+            {showDeadlinePicker ? (
+                <DateTimePicker
+                    value={deadline}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'compact' : 'default'}
+                    onChange={(_, date) => date && setDeadline(date)}
+                    style={{ width: 120, height: 20 }}
+                />
+            ) : (
+                <Text>{deadline.toDateString()}</Text>
+            )}
+            </View>
+          </View>
+
+          {isEditing ? (
+            <>
+              <View className="flex-col items-start gap-2 mt-4">
+                <Text className="text-sm text-gray-500 mr-2">Project summary:</Text> 
+                <TextInput className="text-sm text-gray-700 bg-white p-2 rounded-lg border mt-1 mb-2" multiline value={summary} onChangeText={setSummary} />
+              </View>
+             
+             <TouchableOpacity onPress={handleSave} className="bg-[#F8C8C3] py-2 px-4 rounded-lg mt-4 self-end">
+                <Text className="text-white font-semibold text-center">Save</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <Text className="text-sm text-gray-600 mt-2">{project.project_summary}</Text>
+            </>
+          )}
+        </View>
+
+
+        {inProgress.length > 0 && (
+          <View className="mt-6">
+            <Text className="font-medium text-lg">In Progress</Text>
+            {inProgress.map((m) => (
+              <TouchableOpacity
+                key={m.milestone_id}
+                onPress={() => router.push({ pathname: '/milestones/[milestone_id]', params: { milestone_id: m.milestone_id } })}
+                className="mt-2 border border-gray-200 rounded-lg p-4"
+              >
+                <View className="flex-row justify-between items-center">
+                  <Text className="font-medium">{m.milestone_name}</Text>
+                  <Text className="text-sm">ddl: {new Date(m.ddl).toDateString()}</Text>
+                </View>
+                <View className="h-3 bg-gray-200 rounded-full mt-4 overflow-hidden">
+                  <View className="h-3 bg-[#F8C8C3] rounded-full" style={{ width: `${m.progress * 100}%` }} />
+                </View>
+                <Text className="text-right text-xs mt-1">
+                  {Math.round((1 - m.progress) * project.estimated_loading)} hours left
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {todo.length > 0 && (
+          <View className="mt-6">
+            <Text className="font-medium text-lg">Todo</Text>
+            {todo.map((m) => (
+              <TouchableOpacity
+                key={m.milestone_id}
+                onPress={() => router.push({ pathname: '/milestones/[milestone_id]', params: { milestone_id: m.milestone_id } })}
+                className="mt-2 border border-gray-200 rounded-lg p-4"
+              >
+                <View className="flex-row justify-between items-center">
+                  <Text className="font-medium">{m.milestone_name}</Text>
+                  <Text className="text-sm">ddl: {new Date(m.ddl).toDateString()}</Text>
+                </View>
+                <View className="h-3 bg-gray-200 rounded-full mt-4 overflow-hidden">
+                  <View className="h-3 bg-gray-300 rounded-full w-0" />
+                </View>
+                <Text className="text-right text-xs mt-1">{project.estimated_loading} hours left</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {done.length > 0 && (
+          <View className="mt-6 mb-8">
+            <Text className="font-medium text-lg">Done</Text>
+            {done.map((m) => (
+              <TouchableOpacity
+                key={m.milestone_id}
+                onPress={() => router.push({ pathname: '/milestones/[milestone_id]', params: { milestone_id: m.milestone_id } })}
+                className="mt-2 border border-gray-200 rounded-lg p-4"
+              >
+                <View className="flex-row justify-between items-center">
+                  <Text className="font-medium">{m.milestone_name}</Text>
+                  <Text className="text-sm">ddl: {new Date(m.ddl).toDateString()}</Text>
+                </View>
+                <View className="h-3 bg-gray-200 rounded-full mt-4 overflow-hidden">
+                  <View className="h-3 bg-[#F8C8C3] rounded-full w-full" />
+                </View>
+                <Text className="text-right text-xs mt-1">0 hours left</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}

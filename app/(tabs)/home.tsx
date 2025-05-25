@@ -1,0 +1,366 @@
+import { Feather } from '@expo/vector-icons';
+import { addDays, subDays } from 'date-fns';
+import { useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import {
+  Alert,
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+
+interface Task {
+  id: string;
+  title: string;
+  details?: string;
+  etc?: string;
+  done: boolean;
+  date: string; // 添加日期字段
+}
+
+export default function HomeScreen() {
+  const router = useRouter();
+  const [tasks, setTasks] = useState<Task[]>([
+    {
+      id: '1',
+      title: 'Discuss about the work',
+      details: 'Design and compile the presentation for the upcoming internal project review. The slides should cover key project objectives, timeline, resource allocation, and expected outcomes.',
+      etc: '1.5 hrs',
+      done: false,
+      date: new Date().toDateString(),
+    },
+    {
+      id: '2',
+      title: 'SAD Interview 2 people',
+      done: false,
+      date: new Date().toDateString(),
+    },
+    {
+      id: '3',
+      title: 'SAD Figma',
+      done: false,
+      date: addDays(new Date(), 1).toDateString(),
+    },
+    {
+      id: '4',
+      title: 'SAD Slide',
+      done: true,
+      date: subDays(new Date(), 1).toDateString(),
+    },
+    {
+      id: '5',
+      title: 'SAD Report',
+      done: true,
+      date: subDays(new Date(), 2).toDateString(),
+    },
+  ]);
+
+  const [selectedDateIndex, setSelectedDateIndex] = useState(30); // 30 是今天的索引
+  const [editVisible, setEditVisible] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editEtc, setEditEtc] = useState('');
+  const [editDetails, setEditDetails] = useState('');
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  // 在组件挂载时滚动到今天的位置
+  useEffect(() => {
+    // 延迟执行以确保 ScrollView 已经渲染完成
+    setTimeout(() => {
+      if (scrollViewRef.current) {
+        // 计算今天的位置 (每个日期项宽度约为 80px，包括 margin)
+        const todayPosition = 30 * 80; // 索引30是今天，每项约80px宽
+        scrollViewRef.current.scrollTo({ x: todayPosition - 150, animated: true });
+      }
+    }, 100);
+  }, []);
+
+  const toggleTaskDone = (id: string) => {
+    const updated = tasks.map(task => 
+      task.id === id ? { ...task, done: !task.done } : task
+    );
+    updated.sort((a, b) => Number(a.done) - Number(b.done));
+    setTasks(updated);
+  };
+
+  const openEditModal = (task: Task) => {
+    setEditingTask(task);
+    setEditTitle(task.title);
+    setEditEtc(task.etc || '');
+    setEditDetails(task.details || '');
+    setEditVisible(true);
+  };
+
+  const saveEditedTask = () => {
+    if (editingTask) {
+      const updated = tasks.map(task => 
+        task.id === editingTask.id 
+          ? { ...task, title: editTitle, etc: editEtc, details: editDetails }
+          : task
+      );
+      setTasks(updated);
+      Alert.alert('Success', 'Task updated successfully!');
+    }
+    setEditVisible(false);
+    setEditingTask(null);
+  };
+
+  const deleteTask = (id: string) => {
+    Alert.alert(
+      'Delete Task',
+      'Are you sure you want to delete this task?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            setTasks(tasks.filter(task => task.id !== id));
+          },
+        },
+      ]
+    );
+  };
+
+  const today = new Date();
+  // 創建前30天到後30天的日期數組
+  const dates = Array.from({ length: 61 }, (_, i) => subDays(today, 30 - i));
+  
+  // 獲取選中日期的任務
+  const selectedDate = dates[selectedDateIndex];
+  const selectedDateString = selectedDate.toDateString();
+  const filteredTasks = tasks.filter(task => task.date === selectedDateString);
+
+  return (
+    <View className="flex-1 bg-[#F8C8C3] pt-12">
+      <View className="flex-row justify-between items-center px-6 pt-6">
+        <TouchableOpacity className="bg-[#F29389] rounded-full py-2 px-6"
+        onPress={() => router.push('/calendar')}
+        >
+          <Text className="text-white font-medium">Calendar</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          className="bg-[#F29389] rounded-full py-2 px-6" 
+          onPress={() => router.push('/projects')}
+        >
+          <Text className="text-white font-medium">Project</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View className="px-6 mt-6 flex-row gap-12 items-center m-2">
+        <View>
+          <Text className="text-3xl font-semibold text-red-900">Good morning,</Text>
+          <Text className="text-3xl font-semibold text-red-900">Sandy Liu !</Text>
+        </View>
+        <Image 
+          source={require('../../assets/images/liver.png')} 
+          className="w-32 h-28" 
+          style={{ resizeMode: 'contain' }} 
+        />
+      </View>
+
+      <View className="flex-row items-center justify-center mt-4 mb-10">
+        <Pressable onPress={() => scrollViewRef.current?.scrollTo({ x: -200, animated: true })}>
+          <Feather name="chevron-left" size={24} color="#F29389" />
+        </Pressable>
+
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          contentContainerStyle={{ paddingHorizontal: 16 }} 
+          ref={scrollViewRef}
+        >
+          {dates.map((date, index) => (
+            <TouchableOpacity 
+              key={index} 
+              className="mx-2 items-center justify-center" 
+              onPress={() => setSelectedDateIndex(index)}
+            >
+              <View className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                selectedDateIndex === index ? 'bg-[#F29389]' : 'bg-white'
+              }`}>
+                {index === 30 ? (
+                  <Text className={`text-center font-bold ${
+                    selectedDateIndex === index ? 'text-white' : 'text-[#F29389]'
+                  }`}>
+                    Today
+                  </Text>
+                ) : (
+                  <>
+                    <Text className={`text-center font-bold ${
+                      selectedDateIndex === index ? 'text-white' : 'text-[#F29389]'
+                    }`}>
+                      {date.toLocaleString('default', { month: 'short' })}
+                    </Text>
+                    <Text className={`text-center font-bold ${
+                      selectedDateIndex === index ? 'text-white' : 'text-[#F29389]'
+                    }`}>
+                      {date.getDate()}
+                    </Text>
+                  </>
+                )}
+              </View>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        <Pressable onPress={() => scrollViewRef.current?.scrollTo({ x: 200, animated: true })}>
+          <Feather name="chevron-right" size={24} color="#F29389" />
+        </Pressable>
+      </View>
+      
+      <View className="bg-white rounded-t-3xl shadow-lg mx-4 mt-6 pb-4 flex-1">
+        <View className="flex-row justify-between items-center pr-6 pl-6 mt-4">
+          <Text className="text-lg font-semibold text-red-900">
+            {selectedDateIndex === 30 ? 'Today\'s Tasks' : `Tasks for ${selectedDate.toLocaleDateString()}`}
+          </Text>
+          <TouchableOpacity onPress={() => setIsEditMode(!isEditMode)}>
+            <Text className={`font-medium ${isEditMode ? 'text-red-500' : 'text-[#F8C8C3]'}`}>
+              {isEditMode ? 'Done' : 'Edit'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView className="px-6 mt-4 mb-6">
+          {filteredTasks.length === 0 ? (
+            <View className="items-center justify-center py-8">
+              <Text className="text-gray-500 text-lg">No tasks for this date</Text>
+            </View>
+          ) : (
+            filteredTasks.map((task) => (
+              <View key={task.id} className="mb-4 rounded-3xl p-4 bg-[#F8C8C3]">
+                <View className="flex-row justify-between items-start">
+                  <TouchableOpacity 
+                    onPress={() => openEditModal(task)}
+                    className="flex-1"
+                  >
+                    <Text className="text-red-800 font-bold">{task.title}</Text>
+                  </TouchableOpacity>
+                  {task.etc && (
+                    <View className="ml-4">
+                      <Text className="text-red-800">ETC: {task.etc}</Text>
+                    </View>
+                  )}
+                </View>
+                
+                {task.details && (
+                  <View className="mt-3 mb-3">
+                    <Text className="text-red-700 text-justify leading-5">
+                      {task.details}
+                    </Text>
+                  </View>
+                )}
+                
+                <View className="flex-row justify-between items-center mt-2">
+                  <View className="flex-1" />
+                  <View className="flex-row items-center">
+                    {isEditMode && (
+                      <TouchableOpacity 
+                        className="mr-4 p-2" 
+                        onPress={() => deleteTask(task.id)}
+                      >
+                        <Feather name="trash-2" size={20} color="#ef4444" />
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity onPress={() => toggleTaskDone(task.id)}>
+                      <View className={`w-6 h-6 rounded-full justify-center items-center ${
+                        task.done ? 'bg-red-500' : 'bg-white border border-red-300'
+                      }`}>
+                        {task.done && (
+                          <Text className="text-white text-xs">✓</Text>
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            ))
+          )}
+        </ScrollView>
+
+        {/* Edit Task Modal */}
+        <Modal 
+          animationType="slide" 
+          transparent={true} 
+          visible={editVisible} 
+          onRequestClose={() => setEditVisible(false)}
+        >
+          <View className="flex-1 justify-center items-center bg-black/50">
+            <View className="bg-white w-4/5 max-h-4/5 rounded-2xl">
+              {/* Modal Header */}
+              <View className="bg-[#F8C8C3] rounded-t-2xl px-6 py-4 flex-row justify-between items-center">
+                <Text className="text-xl font-bold text-red-900">Edit Task</Text>
+                <TouchableOpacity onPress={() => setEditVisible(false)}>
+                  <Feather name="x" size={24} color="#7f1d1d" />
+                </TouchableOpacity>
+              </View>
+              
+              <ScrollView className="px-6 py-4">
+                {/* Title Input */}
+                <View className="mb-4">
+                  <Text className="text-red-900 font-semibold mb-2 text-base">Task Title</Text>
+                  <TextInput 
+                    className="bg-pink-50 p-3 rounded-xl border border-pink-200 text-base" 
+                    value={editTitle} 
+                    onChangeText={setEditTitle}
+                    placeholder="Enter task title"
+                    placeholderTextColor="#9ca3af"
+                  />
+                </View>
+                
+                {/* Estimated Time Input */}
+                <View className="mb-4">
+                  <Text className="text-red-900 font-semibold mb-2 text-base">Estimated Time</Text>
+                  <TextInput 
+                    className="bg-pink-50 p-3 rounded-xl border border-pink-200 text-base" 
+                    value={editEtc} 
+                    onChangeText={setEditEtc} 
+                    placeholder="e.g. 1.5 hrs, 30 mins"
+                    placeholderTextColor="#9ca3af"
+                  />
+                </View>
+                
+                {/* Details Input */}
+                <View className="mb-6">
+                  <Text className="text-red-900 font-semibold mb-2 text-base">Task Details</Text>
+                  <TextInput 
+                    className="bg-pink-50 p-3 rounded-xl border border-pink-200 h-32 text-base" 
+                    value={editDetails} 
+                    onChangeText={setEditDetails} 
+                    multiline 
+                    textAlignVertical="top"
+                    placeholder="Enter detailed description of the task..."
+                    placeholderTextColor="#9ca3af"
+                  />
+                </View>
+              </ScrollView>
+              
+              {/* Modal Footer */}
+              <View className="flex-row justify-end px-6 py-4 border-t border-pink-100">
+                <TouchableOpacity 
+                  className="bg-gray-300 rounded-xl py-3 px-6 mr-3" 
+                  onPress={() => setEditVisible(false)}
+                >
+                  <Text className="text-gray-700 font-medium">Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  className="bg-[#F29389] rounded-xl py-3 px-6" 
+                  onPress={saveEditedTask}
+                >
+                  <Text className="text-white font-medium">Save Changes</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      </View>
+    </View>
+  );
+}

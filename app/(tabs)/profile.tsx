@@ -1,7 +1,46 @@
-// import { ChevronLeft } from 'lucide-react';
 import { SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
+// Dummy project data
+const project = {
+  project_name: 'SAD Final Project',
+  project_summary:
+    'System Analysis and Design final project presentation for a real-world information system.',
+  project_start_time: '2025-05-15T09:00:00',
+  project_end_time: '2025-05-30T18:00:00',
+  estimated_loading: 12, // in hours
+  milestones: [
+    {
+      milestone_id: 'ms001',
+      milestone_name: 'Research Phase',
+      ddl: '2025-05-20T18:00:00',
+      progress: 1.0,
+    },
+    {
+      milestone_id: 'ms002',
+      milestone_name: 'Design Phase',
+      ddl: '2025-05-24T18:00:00',
+      progress: 0.6,
+    },
+    {
+      milestone_id: 'ms003',
+      milestone_name: 'Implementation Phase',
+      ddl: '2025-05-27T18:00:00',
+      progress: 0.0,
+    },
+    {
+      milestone_id: 'ms004',
+      milestone_name: 'Final Report Submission',
+      ddl: '2025-05-30T18:00:00',
+      progress: 0.0,
+    },
+  ],
+};
+
 export default function ProjectManagementScreen() {
+  const done = project.milestones.filter((m) => m.progress === 1.0);
+  const inProgress = project.milestones.filter((m) => m.progress > 0 && m.progress < 1);
+  const todo = project.milestones.filter((m) => m.progress === 0);
+
   return (
     <SafeAreaView className="flex-1 bg-white">
       <ScrollView className="flex-1">
@@ -12,101 +51,94 @@ export default function ProjectManagementScreen() {
           </TouchableOpacity>
           <Text className="text-lg font-medium">Back</Text>
         </View>
-        
+
         {/* Loading Circle */}
         <View className="items-center justify-center mt-4">
           <View className="w-64 h-64 rounded-full border-16 border-gray-100 relative">
-            {/* Pink/red progress arc (about 25% complete) */}
             <View className="absolute top-0 right-0 w-64 h-64 rounded-full border-16 border-transparent border-t-pink-300 border-r-pink-300 rotate-45" />
-            
-            {/* Center text */}
             <View className="absolute inset-0 items-center justify-center">
               <Text className="text-center text-lg font-medium">Estimated Loading</Text>
-              <Text className="text-center text-6xl font-bold mt-2">12</Text>
+              <Text className="text-center text-6xl font-bold mt-2">{project.estimated_loading}</Text>
               <Text className="text-center text-xl">Hours</Text>
             </View>
           </View>
         </View>
-        
+
         {/* Project Title */}
-        <Text className="text-2xl font-bold text-center mt-6">SAD Final Project</Text>
-        
+        <Text className="text-2xl font-bold text-center mt-6">{project.project_name}</Text>
+
         {/* Project Summary */}
         <View className="mx-4 mt-6 bg-gray-100 p-4 rounded-lg">
           <View className="flex-row justify-between items-start">
             <Text className="font-medium text-base">Project Summary</Text>
-            <Text className="text-sm">Deadline: May 21</Text>
+            <Text className="text-sm">Deadline: May 30</Text>
           </View>
-          <Text className="text-sm text-gray-600 mt-2">
-            Students will work in teams of 5-7 to develop an information system from scratch, applying system analysis and design concepts learned in class. The project emphasizes real-world problem solving, teamwork, requirements gathering, and system implementation.
-          </Text>
-          <Text className="text-sm text-gray-600 mt-2">
-            There are four milestones:
-          </Text>
-          <View className="ml-4 mt-1">
-            <Text className="text-sm text-gray-600">• Milestones 1-3: Progress presentations</Text>
-            <Text className="text-sm text-gray-600">• Milestone 4: Final submission of documentation and code</Text>
-          </View>
-          <Text className="text-sm text-gray-600 mt-2">
-            The project will be evaluated based on system analysis, design, development, testing, and project management skills.
-          </Text>
+          <Text className="text-sm text-gray-600 mt-2">{project.project_summary}</Text>
         </View>
-        
+
         {/* In Progress Section */}
-        <View className="mt-6 mx-4">
-          <Text className="font-medium text-lg">In Progress</Text>
-          <View className="mt-2 border border-gray-200 rounded-lg p-4">
-            <View className="flex-row justify-between items-center">
-              <Text className="font-medium">Milestone #2</Text>
-              <Text className="text-sm">ddl: April 21</Text>
-            </View>
-            <View className="h-3 bg-gray-200 rounded-full mt-4 overflow-hidden">
-              <View className="h-3 bg-pink-300 rounded-full w-5/6" />
-            </View>
-            <Text className="text-right text-xs mt-1">0.5 hours left</Text>
+        {inProgress.length > 0 && (
+          <View className="mt-6 mx-4">
+            <Text className="font-medium text-lg">In Progress</Text>
+            {inProgress.map((m) => (
+              <View key={m.milestone_id} className="mt-2 border border-gray-200 rounded-lg p-4">
+                <View className="flex-row justify-between items-center">
+                  <Text className="font-medium">{m.milestone_name}</Text>
+                  <Text className="text-sm">ddl: {new Date(m.ddl).toDateString()}</Text>
+                </View>
+                <View className="h-3 bg-gray-200 rounded-full mt-4 overflow-hidden">
+                  <View
+                    className="h-3 bg-[#F8C8C3] rounded-full"
+                    style={{ width: `${m.progress * 100}%` }}
+                  />
+                </View>
+                <Text className="text-right text-xs mt-1">
+                  {Math.round((1 - m.progress) * project.estimated_loading)} hours left
+                </Text>
+              </View>
+            ))}
           </View>
-        </View>
-        
+        )}
+
         {/* Todo Section */}
-        <View className="mt-6 mx-4">
-          <Text className="font-medium text-lg">Todo</Text>
-          <View className="mt-2 border border-gray-200 rounded-lg p-4">
-            <View className="flex-row justify-between items-center">
-              <Text className="font-medium">Milestone #3</Text>
-              <Text className="text-sm">ddl: May 10</Text>
-            </View>
-            <View className="h-3 bg-gray-200 rounded-full mt-4 overflow-hidden">
-              <View className="h-3 bg-gray-300 rounded-full w-0" />
-            </View>
-            <Text className="text-right text-xs mt-1">5 hours left</Text>
+        {todo.length > 0 && (
+          <View className="mt-6 mx-4">
+            <Text className="font-medium text-lg">Todo</Text>
+            {todo.map((m) => (
+              <View key={m.milestone_id} className="mt-2 border border-gray-200 rounded-lg p-4">
+                <View className="flex-row justify-between items-center">
+                  <Text className="font-medium">{m.milestone_name}</Text>
+                  <Text className="text-sm">ddl: {new Date(m.ddl).toDateString()}</Text>
+                </View>
+                <View className="h-3 bg-gray-200 rounded-full mt-4 overflow-hidden">
+                  <View className="h-3 bg-gray-300 rounded-full w-0" />
+                </View>
+                <Text className="text-right text-xs mt-1">
+                  {project.estimated_loading} hours left
+                </Text>
+              </View>
+            ))}
           </View>
-          
-          <View className="mt-3 border border-gray-200 rounded-lg p-4">
-            <View className="flex-row justify-between items-center">
-              <Text className="font-medium">Milestone #4</Text>
-              <Text className="text-sm">ddl: May 21</Text>
-            </View>
-            <View className="h-3 bg-gray-200 rounded-full mt-4 overflow-hidden">
-              <View className="h-3 bg-gray-300 rounded-full w-0" />
-            </View>
-            <Text className="text-right text-xs mt-1">6.5 hours left</Text>
-          </View>
-        </View>
-        
+        )}
+
         {/* Done Section */}
-        <View className="mt-6 mx-4 mb-8">
-          <Text className="font-medium text-lg">Done</Text>
-          <View className="mt-2 border border-gray-200 rounded-lg p-4">
-            <View className="flex-row justify-between items-center">
-              <Text className="font-medium">Milestone #1</Text>
-              <Text className="text-sm">ddl: April 5</Text>
-            </View>
-            <View className="h-3 bg-gray-200 rounded-full mt-4 overflow-hidden">
-              <View className="h-3 bg-pink-300 rounded-full w-full" />
-            </View>
-            <Text className="text-right text-xs mt-1">0 hours left</Text>
+        {done.length > 0 && (
+          <View className="mt-6 mx-4 mb-8">
+            <Text className="font-medium text-lg">Done</Text>
+            {done.map((m) => (
+              <View key={m.milestone_id} className="mt-2 border border-gray-200 rounded-lg p-4">
+                <View className="flex-row justify-between items-center">
+                  <Text className="font-medium">{m.milestone_name}</Text>
+                  <Text className="text-sm">ddl: {new Date(m.ddl).toDateString()}</Text>
+                </View>
+                <View className="h-3 bg-gray-200 rounded-full mt-4 overflow-hidden">
+                  <View className="h-3 bg-[#F8C8C3] rounded-full w-full" />
+                </View>
+                <Text className="text-right text-xs mt-1">0 hours left</Text>
+              </View>
+            ))}
           </View>
-        </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
