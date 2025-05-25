@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { FlatList, Image, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AddProjectModal from '../components/AddProjectModal';
 
 // Define navigation types
@@ -36,7 +37,7 @@ export default function Projects (){
     // const navigation = useNavigation<ProjectsScreenNavigationProp>();
     const [projects, setProjects] = useState<Project[]>(initialProjects);
     const goToHome = () => {
-        router.push('/(tabs)/home');
+        router.push('./home');
     };
 
     const renderProgressBar = (currentTask: string, progress: number) => (
@@ -107,10 +108,11 @@ export default function Projects (){
 
     return (
         <>
-            <View className="flex-1 bg-[#F8C8C3] pt-12 shadow-lg">
+            <SafeAreaView className="flex-1 bg-[#F8C8C3] shadow-lg">
                 <View className="px-6 pt-6 flex-row items-center">
-                    <TouchableOpacity className="bg-[#F29389] rounded-full py-2 px-6" onPress={goToHome}>
-                    <Text className="text-white font-medium">Home</Text>
+                    <TouchableOpacity onPress={() => router.push("/home")} className="flex-row items-center bg-[#F29389] py-2 px-5 rounded-full">
+                        <Text className="text-white mr-1 text-lg">‹</Text>
+                        <Text className="text-white font-semibold">Home</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -128,13 +130,17 @@ export default function Projects (){
                     data={projects}
                     className="px-6 mt-6"
                     renderItem={({ item }) => (
-                        <View className="bg-white rounded-2xl p-4 mb-4">
+                        <TouchableOpacity
+                            onPress={() => router.push(`./projects/${item.id}`)}
+                            className="bg-white rounded-2xl p-4 mb-4"
+                            activeOpacity={0.8}
+                        >
                             <View className="flex-row justify-between items-center">
                                 <Text className="text-lg font-bold text-gray-800">{item.title}</Text>
                                 <Text className="text-gray-600">{item.dueDate}</Text>
                             </View>
                             {renderProgressBar(item.currentTask, item.progress)}
-                        </View>
+                        </TouchableOpacity>
                     )}
                     keyExtractor={item => item.id}
                 />
@@ -145,7 +151,7 @@ export default function Projects (){
                 >
                     <Text className="text-white text-2xl">+</Text>
                 </TouchableOpacity>
-            </View>
+            </SafeAreaView>
 
             <AddProjectModal visible={modalVisible} onClose={() => setModalVisible(false)} />
         </>

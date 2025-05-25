@@ -12,7 +12,7 @@ export default function Register() {
 
   const onRegister = () => {
     // TODO: Add validation and backend integration
-    router.push('/(tabs)/home');
+    router.push('./home');
   };
 
   return (

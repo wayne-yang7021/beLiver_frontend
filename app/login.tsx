@@ -10,7 +10,7 @@ export default function Login() {
 
   const onLogin = () => {
     // TODO: auth logic here
-    router.push('/(tabs)/home');
+    router.push('./home');
   };
 
 
@@ -64,7 +64,7 @@ export default function Login() {
       {/* Register */}
       <View className="mt-6 items-center">
         <Text className="text-[#772343]">Dont have an account?</Text>
-        <TouchableOpacity onPress={() => router.push('/')}>
+        <TouchableOpacity onPress={() => router.push('./register')} className="mt-2">
           <Text className="text-[#5E1526] font-semibold mt-1">Create one here</Text>
         </TouchableOpacity>
       </View>

@@ -280,7 +280,7 @@ export default function Calendar() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#F8C8C3]">
-      <View className="pt-8 pr-4 items-end">
+      <View className="pt-6 pr-6 items-end">
         <TouchableOpacity onPress={() => router.push("/home")} className="flex-row items-center bg-[#F29389] py-2 px-5 rounded-full">
           <Text className="text-white font-semibold">Home</Text>
           <Text className="text-white ml-1 text-lg">›</Text>
@@ -293,7 +293,7 @@ export default function Calendar() {
           <Text className="text-lg text-[#5E1526] mt-2 font-medium">Here&apos;s what your week</Text>
           <Text className="text-lg text-[#5E1526] font-medium">looks like.</Text>
         </View>
-        <Image source={require('../../assets/images/liver.png')} className="w-32 h-28" style={{ resizeMode: 'contain' }} />
+        <Image source={require('../assets/images/liver.png')} className="w-32 h-28" style={{ resizeMode: 'contain' }} />
       </View>
 
       

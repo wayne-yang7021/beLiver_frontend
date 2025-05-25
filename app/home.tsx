@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface Task {
   id: string;
@@ -102,15 +103,15 @@ export default function HomeScreen() {
   const filteredTasks = tasks.filter(task => task.date === selectedDateString);
 
   return (
-    <View className="flex-1 bg-[#F8C8C3] pt-12">
+    <SafeAreaView className="flex-1 bg-[#F8C8C3]">
       <View className="flex-row justify-between items-center px-6 pt-6">
-        <TouchableOpacity className="bg-[#F29389] rounded-full py-2 px-6"
-        onPress={() => router.push('/calendar')}
-        >
-          <Text className="text-white font-medium">Calendar</Text>
+        <TouchableOpacity onPress={() => router.push("/calendar")} className="flex-row items-center bg-[#F29389] py-2 px-5 rounded-full">
+          <Text className="text-white mr-1 text-lg">‹</Text>
+          <Text className="text-white font-semibold"> Calendar</Text>
         </TouchableOpacity>
-        <TouchableOpacity className="bg-[#F29389] rounded-full py-2 px-6" onPress={() => router.push('/projects')}>
-          <Text className="text-white font-medium">Project</Text>
+        <TouchableOpacity onPress={() => router.push("/projects")} className="flex-row items-center bg-[#F29389] py-2 px-5 rounded-full">
+          <Text className="text-white font-semibold">Projects</Text>
+          <Text className="text-white ml-1 text-lg">›</Text>
         </TouchableOpacity>
       </View>
 
@@ -119,7 +120,7 @@ export default function HomeScreen() {
           <Text className="text-3xl font-semibold text-red-900">Good morning,</Text>
           <Text className="text-3xl font-semibold text-red-900">Sandy Liu !</Text>
         </View>
-        <Image source={require('../../assets/images/liver.png')} className="w-32 h-28" style={{ resizeMode: 'contain' }} />
+        <Image source={require('../assets/images/liver.png')} className="w-32 h-28" style={{ resizeMode: 'contain' }} />
       </View>
 
       <View className="flex-row items-center justify-center mt-4 mb-10">
@@ -301,6 +302,6 @@ export default function HomeScreen() {
           </View>
         </Modal>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
