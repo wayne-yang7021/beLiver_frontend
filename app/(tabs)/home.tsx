@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  Dimensions,
   Image,
   Modal,
   Pressable,
@@ -20,8 +21,11 @@ interface Task {
   details?: string;
   etc?: string;
   done: boolean;
-  date: string; // 添加日期字段
+  date: string;
 }
+
+const ITEM_WIDTH = 72;
+const screenWidth = Dimensions.get('window').width;
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -34,33 +38,13 @@ export default function HomeScreen() {
       done: false,
       date: new Date().toDateString(),
     },
-    {
-      id: '2',
-      title: 'SAD Interview 2 people',
-      done: false,
-      date: new Date().toDateString(),
-    },
-    {
-      id: '3',
-      title: 'SAD Figma',
-      done: false,
-      date: addDays(new Date(), 1).toDateString(),
-    },
-    {
-      id: '4',
-      title: 'SAD Slide',
-      done: true,
-      date: subDays(new Date(), 1).toDateString(),
-    },
-    {
-      id: '5',
-      title: 'SAD Report',
-      done: true,
-      date: subDays(new Date(), 2).toDateString(),
-    },
+    { id: '2', title: 'SAD Interview 2 people', done: false, date: new Date().toDateString() },
+    { id: '3', title: 'SAD Figma', done: false, date: addDays(new Date(), 1).toDateString() },
+    { id: '4', title: 'SAD Slide', done: true, date: subDays(new Date(), 1).toDateString() },
+    { id: '5', title: 'SAD Report', done: true, date: subDays(new Date(), 2).toDateString() },
   ]);
 
-  const [selectedDateIndex, setSelectedDateIndex] = useState(30); // 30 是今天的索引
+  const [selectedDateIndex, setSelectedDateIndex] = useState(30);
   const [editVisible, setEditVisible] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -69,23 +53,19 @@ export default function HomeScreen() {
   const [isEditMode, setIsEditMode] = useState(false);
 
   const scrollViewRef = useRef<ScrollView>(null);
+  const scrollX = useRef(0);
 
-  // 在组件挂载时滚动到今天的位置
   useEffect(() => {
-    // 延迟执行以确保 ScrollView 已经渲染完成
     setTimeout(() => {
-      if (scrollViewRef.current) {
-        // 计算今天的位置 (每个日期项宽度约为 80px，包括 margin)
-        const todayPosition = 30 * 80; // 索引30是今天，每项约80px宽
-        scrollViewRef.current.scrollTo({ x: todayPosition - 150, animated: true });
-      }
+      scrollViewRef.current?.scrollTo({
+        x: ITEM_WIDTH * 30 - screenWidth / 2 + ITEM_WIDTH / 2,
+        animated: true,
+      });
     }, 100);
   }, []);
 
   const toggleTaskDone = (id: string) => {
-    const updated = tasks.map(task => 
-      task.id === id ? { ...task, done: !task.done } : task
-    );
+    const updated = tasks.map(task => task.id === id ? { ...task, done: !task.done } : task);
     updated.sort((a, b) => Number(a.done) - Number(b.done));
     setTasks(updated);
   };
@@ -100,11 +80,7 @@ export default function HomeScreen() {
 
   const saveEditedTask = () => {
     if (editingTask) {
-      const updated = tasks.map(task => 
-        task.id === editingTask.id 
-          ? { ...task, title: editTitle, etc: editEtc, details: editDetails }
-          : task
-      );
+      const updated = tasks.map(task => task.id === editingTask.id ? { ...task, title: editTitle, etc: editEtc, details: editDetails } : task);
       setTasks(updated);
       Alert.alert('Success', 'Task updated successfully!');
     }
@@ -113,27 +89,14 @@ export default function HomeScreen() {
   };
 
   const deleteTask = (id: string) => {
-    Alert.alert(
-      'Delete Task',
-      'Are you sure you want to delete this task?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            setTasks(tasks.filter(task => task.id !== id));
-          },
-        },
-      ]
-    );
+    Alert.alert('Delete Task', 'Are you sure you want to delete this task?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => setTasks(tasks.filter(task => task.id !== id)) },
+    ]);
   };
 
   const today = new Date();
-  // 創建前30天到後30天的日期數組
   const dates = Array.from({ length: 61 }, (_, i) => subDays(today, 30 - i));
-  
-  // 獲取選中日期的任務
   const selectedDate = dates[selectedDateIndex];
   const selectedDateString = selectedDate.toDateString();
   const filteredTasks = tasks.filter(task => task.date === selectedDateString);
@@ -144,10 +107,7 @@ export default function HomeScreen() {
         <TouchableOpacity className="bg-[#F29389] rounded-full py-2 px-6">
           <Text className="text-white font-medium">Calendar</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
-          className="bg-[#F29389] rounded-full py-2 px-6" 
-          onPress={() => router.push('/projects')}
-        >
+        <TouchableOpacity className="bg-[#F29389] rounded-full py-2 px-6" onPress={() => router.push('/projects')}>
           <Text className="text-white font-medium">Project</Text>
         </TouchableOpacity>
       </View>
@@ -157,51 +117,31 @@ export default function HomeScreen() {
           <Text className="text-3xl font-semibold text-red-900">Good morning,</Text>
           <Text className="text-3xl font-semibold text-red-900">Sandy Liu !</Text>
         </View>
-        <Image 
-          source={require('../../assets/images/liver.png')} 
-          className="w-32 h-28" 
-          style={{ resizeMode: 'contain' }} 
-        />
+        <Image source={require('../../assets/images/liver.png')} className="w-32 h-28" style={{ resizeMode: 'contain' }} />
       </View>
 
       <View className="flex-row items-center justify-center mt-4 mb-10">
-        <Pressable onPress={() => scrollViewRef.current?.scrollTo({ x: -200, animated: true })}>
+        <Pressable onPress={() => scrollViewRef.current?.scrollTo({ x: Math.max(scrollX.current - ITEM_WIDTH, 0), animated: true })}>
           <Feather name="chevron-left" size={24} color="#F29389" />
         </Pressable>
 
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false} 
-          contentContainerStyle={{ paddingHorizontal: 16 }} 
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16 }}
           ref={scrollViewRef}
+          onScroll={e => (scrollX.current = e.nativeEvent.contentOffset.x)}
+          scrollEventThrottle={16}
         >
           {dates.map((date, index) => (
-            <TouchableOpacity 
-              key={index} 
-              className="mx-2 items-center justify-center" 
-              onPress={() => setSelectedDateIndex(index)}
-            >
-              <View className={`w-16 h-16 rounded-full flex items-center justify-center ${
-                selectedDateIndex === index ? 'bg-[#F29389]' : 'bg-white'
-              }`}>
+            <TouchableOpacity key={index} className="mx-2 items-center justify-center" onPress={() => setSelectedDateIndex(index)}>
+              <View className={`w-16 h-16 rounded-full flex items-center justify-center ${selectedDateIndex === index ? 'bg-[#F29389]' : 'bg-white'}`}>
                 {index === 30 ? (
-                  <Text className={`text-center font-bold ${
-                    selectedDateIndex === index ? 'text-white' : 'text-[#F29389]'
-                  }`}>
-                    Today
-                  </Text>
+                  <Text className={`text-center font-bold ${selectedDateIndex === index ? 'text-white' : 'text-[#F29389]'}`}>Today</Text>
                 ) : (
                   <>
-                    <Text className={`text-center font-bold ${
-                      selectedDateIndex === index ? 'text-white' : 'text-[#F29389]'
-                    }`}>
-                      {date.toLocaleString('default', { month: 'short' })}
-                    </Text>
-                    <Text className={`text-center font-bold ${
-                      selectedDateIndex === index ? 'text-white' : 'text-[#F29389]'
-                    }`}>
-                      {date.getDate()}
-                    </Text>
+                    <Text className={`text-center font-bold ${selectedDateIndex === index ? 'text-white' : 'text-[#F29389]'}`}>{date.toLocaleString('default', { month: 'short' })}</Text>
+                    <Text className={`text-center font-bold ${selectedDateIndex === index ? 'text-white' : 'text-[#F29389]'}`}>{date.getDate()}</Text>
                   </>
                 )}
               </View>
@@ -209,7 +149,7 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
 
-        <Pressable onPress={() => scrollViewRef.current?.scrollTo({ x: 200, animated: true })}>
+        <Pressable onPress={() => scrollViewRef.current?.scrollTo({ x: scrollX.current + ITEM_WIDTH, animated: true })}>
           <Feather name="chevron-right" size={24} color="#F29389" />
         </Pressable>
       </View>

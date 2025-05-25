@@ -40,7 +40,7 @@ export default function Projects (){
     };
 
     const renderProgressBar = (currentTask: string, progress: number) => (
-        <View className="mt-4 w-full h-20 relative">
+        <View className="mt-6 w-full h-20 relative">
             {/* Background bar */}
             <View className="absolute top-1/2 h-2 w-full bg-pink-100 rounded-full" style={{ transform: [{ translateY: -4 }] }} />
 
@@ -107,7 +107,7 @@ export default function Projects (){
 
     return (
         <>
-            <View className="flex-1 bg-[#F8C8C3] pt-12">
+            <View className="flex-1 bg-[#F8C8C3] pt-12 shadow-lg">
                 <View className="px-6 pt-6 flex-row items-center">
                     <TouchableOpacity className="bg-[#F29389] rounded-full py-2 px-6" onPress={goToHome}>
                     <Text className="text-white font-medium">Home</Text>

@@ -4,10 +4,12 @@ import { useRef, useState } from 'react';
 import {
   FlatList,
   Modal,
+  Platform,
+  Pressable,
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from 'react-native';
 
 export default function AddProjectModal({
@@ -19,6 +21,7 @@ export default function AddProjectModal({
 }) {
   const [title, setTitle] = useState('');
   const [deadline, setDeadline] = useState(new Date());
+  const [showPicker, setShowPicker] = useState(false);
   const [files, setFiles] = useState<any[]>([]);
   const [chatMessages, setChatMessages] = useState<
     { text: string; from: 'user' | 'bot' }[]
@@ -28,32 +31,33 @@ export default function AddProjectModal({
 
   const pickDocument = async () => {
     try {
-        const result = await DocumentPicker.getDocumentAsync({ multiple: false });
+      const result = await DocumentPicker.getDocumentAsync({ multiple: false });
 
-        if (result.canceled || !result.assets || result.assets.length === 0) return;
+      if (result.canceled || !result.assets?.length) {
+        console.log('User cancelled document picker');
+        return;
+      }
 
-        const file = result.assets[0];
+      const file = result.assets[0];
 
-        setFiles((prev) => [...prev, file]);
-
-        setChatMessages((prev) => [
+      setFiles(prev => [...prev, file]);
+      setChatMessages(prev => [
         ...prev,
         {
-            text: `📎 Uploaded file: ${file.name} (${file.mimeType || 'unknown'})`,
-            from: 'user',
+          text: `📎 Uploaded file: ${file.name} (${file.mimeType || 'unknown'})`,
+          from: 'user',
         },
         { text: 'Thanks, file received!', from: 'bot' },
-        ]);
+      ]);
 
-        // Auto scroll down after short delay
-        setTimeout(() => {
+      setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
-        }, 100);
-    } catch (error) {
-        console.warn('DocumentPicker error:', error);
-    }
-    };
+      }, 100);
 
+    } catch (error) {
+      console.error('Document picker error:', error);
+    }
+  };
 
   const sendMessage = () => {
     if (!input.trim()) return;
@@ -75,7 +79,6 @@ export default function AddProjectModal({
           className="bg-white rounded-t-3xl px-6 pt-4 pb-6"
           style={{ height: '80%' }}
         >
-          {/* ───── Modal Drag Indicator & Close ───── */}
           <View className="items-center mb-2">
             <View className="w-10 h-1.5 rounded-full bg-gray-300" />
           </View>
@@ -86,21 +89,70 @@ export default function AddProjectModal({
           <Text className="text-xl font-bold text-center">Add New Project</Text>
 
           {/* Project Title */}
-          <Text className="mt-4 font-semibold">Your Project Name:</Text>
-          <TextInput
-            className="bg-gray-100 p-2 rounded"
-            value={title}
-            onChangeText={setTitle}
-            placeholder="Project name"
-          />
+          <View className="mt-4">
+            <Text className="font-semibold text-[#555] mb-1">
+              Your Project Name: <Text className="text-red-500">*</Text>
+            </Text>
+            <TextInput
+              className="bg-gray-100 p-3 rounded text-gray-700"
+              value={title}
+              onChangeText={setTitle}
+              placeholder="project name"
+              placeholderTextColor="#aaa"
+            />
+          </View>
 
           {/* Deadline */}
-          <Text className="mt-4 font-semibold">Deadline:</Text>
-          <DateTimePicker
-            value={deadline}
-            onChange={(e, date) => date && setDeadline(date)}
-            mode="datetime"
-          />
+          <View className="mt-4">
+            <Text className="font-semibold text-[#555] mb-1">
+              Deadline: <Text className="text-red-500">*</Text>
+            </Text>
+            <Pressable onPress={() => setShowPicker(true)}>
+              <View className="flex-row gap-2">
+                <View className="flex-1 rounded bg-gray-100 px-4 py-2 justify-center">
+                  <Text className="text-pink-500">
+                    {deadline.toLocaleDateString(undefined, {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                    })}
+                  </Text>
+                </View>
+                <View className="flex-1 rounded bg-gray-100 px-4 py-2 justify-center">
+                  <Text className="text-pink-500">
+                    {deadline.toLocaleTimeString(undefined, {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </Text>
+                </View>
+              </View>
+            </Pressable>
+            {showPicker && Platform.OS === 'ios' && (
+              <DateTimePicker
+                value={deadline}
+                onChange={(e, date) => {
+                  if (date) setDeadline(date);
+                  setShowPicker(false);
+                }}
+                mode="datetime"
+                display="spinner"
+                themeVariant="light"
+                textColor="#F29389"
+              />
+            )}
+            {showPicker && Platform.OS === 'android' && (
+              <DateTimePicker
+                value={deadline}
+                onChange={(e, date) => {
+                  setShowPicker(false);
+                  if (date) setDeadline(date);
+                }}
+                mode="datetime"
+                display="default"
+              />
+            )}
+          </View>
 
           {/* Uploaded Files Preview */}
           {files.length > 0 && (
@@ -111,7 +163,7 @@ export default function AddProjectModal({
                   key={index}
                   className="bg-gray-100 p-2 rounded mb-1 flex-row justify-between items-center"
                 >
-                  <Text className="text-sm">{file.name}</Text>
+                  <Text className="text-sm text-gray-700">{file.name}</Text>
                   <Text className="text-xs text-gray-500">{file.mimeType}</Text>
                 </View>
               ))}
@@ -124,12 +176,11 @@ export default function AddProjectModal({
             onPress={pickDocument}
           >
             <Text className="text-center text-[#5E1526] font-semibold">
-              + Upload another file
-               (.docx or .pdf)
+              + Upload your project requirements file (.docx or .pdf)
             </Text>
           </TouchableOpacity>
 
-          {/* ───── Chat History ───── */}
+          {/* Chat History */}
           <View className="flex-1 mt-4 mb-2">
             <FlatList
               ref={flatListRef}
@@ -138,7 +189,7 @@ export default function AddProjectModal({
               contentContainerStyle={{ paddingBottom: 10 }}
               renderItem={({ item }) => (
                 <View
-                  className={`rounded-xl px-4 py-2 mb-2 max-w-[75%]${
+                  className={`rounded-xl px-4 py-2 mb-2 max-w-[75%] ${
                     item.from === 'user'
                       ? 'bg-[#F29389] self-end'
                       : 'bg-gray-100 self-start'
@@ -150,7 +201,7 @@ export default function AddProjectModal({
             />
           </View>
 
-          {/* ───── Chat Input Box ───── */}
+          {/* Chat Input Box */}
           <View className="flex-row items-center bg-gray-200 px-2 py-2 rounded-lg">
             <TextInput
               className="flex-1 p-2"
@@ -164,7 +215,7 @@ export default function AddProjectModal({
             </TouchableOpacity>
           </View>
 
-          {/* ───── Add Button ───── */}
+          {/* Add Button */}
           <TouchableOpacity
             className="mt-4 bg-[#5E1526] rounded-full py-3"
             onPress={onClose}
