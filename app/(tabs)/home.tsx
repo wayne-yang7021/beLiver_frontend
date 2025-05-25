@@ -104,7 +104,9 @@ export default function HomeScreen() {
   return (
     <View className="flex-1 bg-[#F8C8C3] pt-12">
       <View className="flex-row justify-between items-center px-6 pt-6">
-        <TouchableOpacity className="bg-[#F29389] rounded-full py-2 px-6">
+        <TouchableOpacity className="bg-[#F29389] rounded-full py-2 px-6"
+        onPress={() => router.push('/calendar')}
+        >
           <Text className="text-white font-medium">Calendar</Text>
         </TouchableOpacity>
         <TouchableOpacity className="bg-[#F29389] rounded-full py-2 px-6" onPress={() => router.push('/projects')}>
