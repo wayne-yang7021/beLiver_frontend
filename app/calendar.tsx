@@ -112,11 +112,11 @@ const CalendarItemRow: React.FC<{ visibleRange: DateRange; projects: Project[]; 
 
       let roundedClass = '';
       if (isFirstCell && isLastCell) {
-        roundedClass = 'rounded-xl';
+        roundedClass = 'rounded-full';
       } else if (isFirstCell) {
-        roundedClass = 'rounded-l-xl';
+        roundedClass = 'rounded-l-full';
       } else if (isLastCell) {
-        roundedClass = 'rounded-r-xl';
+        roundedClass = 'rounded-r-full';
       }
 
       return (
@@ -178,13 +178,19 @@ const WeekDay: React.FC<{
   isActive: boolean;
   isToday: boolean;
 }> = ({ day, month, isActive, isToday }) => (
-  <View className={`flex justify-center items-center rounded-full w-12 h-12 ${isToday ? 'bg-white' : ''}`}>
-    <Text className={`text-sm text-[#5E1526]`}>{month}</Text>
-    <View className={`tems-center justify-center`}>
-      <Text className={`text-sm font-medium text-[#5E1526]`}>{day}</Text>
+  <View className="items-center justify-center w-12 relative">
+    <View
+      className={`flex justify-center items-center rounded-full w-12 h-12 ${
+        isToday ? 'bg-white opacity-50' : ''
+      }`}
+    >
+      <Text className="text-sm text-[#5E1526]">{month}</Text>
+      <Text className="text-sm font-medium text-[#5E1526]">{day}</Text>
     </View>
   </View>
 );
+
+
 
 export default function Calendar() {
   const [currentIndex, setCurrentIndex] = useState<number>(30);
@@ -281,22 +287,30 @@ export default function Calendar() {
   return (
     <SafeAreaView className="flex-1 bg-[#F8C8C3]">
       <View className="pt-6 pr-6 items-end">
-        <TouchableOpacity onPress={() => router.push("/home")} className="flex-row items-center bg-[#F29389] py-2 px-5 rounded-full">
+        <TouchableOpacity
+          onPress={() => router.push("/home")}
+          className="flex-row items-center bg-[#F29389] py-2 px-5 rounded-full"
+        >
           <Text className="text-white font-semibold">Home</Text>
           <Text className="text-white ml-1 text-lg">›</Text>
         </TouchableOpacity>
       </View>
 
-      <View className="px-8 py-12 flex-row gap-2 mt-12 justify-between items-end">
+      <View className="px-8 flex-row gap-2 justify-between items-end my-6">
         <View>
           <Text className="text-3xl font-semibold text-[#5E1526]">Calendar</Text>
-          <Text className="text-lg text-[#5E1526] mt-2 font-medium">Here&apos;s what your week</Text>
+          <Text className="text-lg text-[#5E1526] mt-2 font-medium">
+            Here&apos;s what your week
+          </Text>
           <Text className="text-lg text-[#5E1526] font-medium">looks like.</Text>
         </View>
-        <Image source={require('../assets/images/liver.png')} className="w-32 h-28" style={{ resizeMode: 'contain' }} />
+        <Image
+          source={require("../assets/images/liver.png")}
+          className="w-32 h-28"
+          style={{ resizeMode: "contain" }}
+        />
       </View>
 
-      
       <ScrollView
         ref={scrollViewRef}
         horizontal
@@ -306,38 +320,44 @@ export default function Calendar() {
         snapToInterval={dayWidth}
         snapToAlignment="start"
         decelerationRate="fast"
-        className='mb-4 max-h-16'
-        contentOffset={{ x: 30 * dayWidth, y: 0 }} // Scroll to today by default
-        style={{ width: dayWidth * visibleDays }} // Limit visible width to 5 days
+        className="mb-4 max-h-16"
+        contentOffset={{ x: 30 * dayWidth, y: 0 }}
+        style={{ width: dayWidth * visibleDays, zIndex: 10 }} // 🔥 Add zIndex
       >
         <View className="flex-row px-6 w-full items-center justify-center">
           {weekDays.map((weekDay, index) => (
-            <View key={index} style={{ width: dayWidth }} className='flex items-center justify-center'>
+            <View
+              key={index}
+              style={{ width: dayWidth }}
+              className="flex items-center justify-center relative"
+            >
               <WeekDay {...weekDay} />
             </View>
           ))}
         </View>
       </ScrollView>
 
-      {/* {visibleRange && (
-        <View className="px-8 mb-3">
-          <Text className="text-sm text-gray-600 text-center">
-            {visibleRange.startDate.toLocaleDateString()} - {visibleRange.endDate.toLocaleDateString()}
-          </Text>
-        </View>
-      )} */}
-
       <View className="flex-1 bg-white rounded-t-3xl shadow-xl h-full">
-        <ScrollView className="flex-1 pt-6 pb-4" showsVerticalScrollIndicator contentContainerStyle={{ paddingHorizontal: 32, paddingBottom: 20 }}>
+        <ScrollView
+          className="flex-1 pt-6 pb-4"
+          showsVerticalScrollIndicator
+          contentContainerStyle={{ paddingHorizontal: 32, paddingBottom: 20 }}
+        >
           {isLoading ? (
             <View className="flex-1 justify-center items-center py-10">
               <Text className="text-gray-500">Loading projects...</Text>
             </View>
           ) : visibleRange && projects.length > 0 ? (
-            <CalendarItemRow visibleRange={visibleRange} projects={projects} dayWidth={dayWidth} />
+            <CalendarItemRow
+              visibleRange={visibleRange}
+              projects={projects}
+              dayWidth={dayWidth}
+            />
           ) : (
             <View className="flex-1 justify-center items-center py-10">
-              <Text className="text-gray-400 text-center">No projects found for the selected date range</Text>
+              <Text className="text-gray-400 text-center">
+                No projects found for the selected date range
+              </Text>
             </View>
           )}
         </ScrollView>
