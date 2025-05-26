@@ -1,16 +1,50 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSession } from '../context/SessionContext';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000'
+// console.log(API_URL); // 
+
 
 export default function Login() {
   const router = useRouter();
+  const { setSession } = useSession();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const onLogin = () => {
-    // TODO: auth logic here
-    router.push('./home');
+  const onLogin = async () => {
+    if (!email || !password) {
+      alert('Please enter both email and password');
+      return;
+    }
+    
+    try {
+      const res = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      console.log('Login response:', data);
+      if (res.ok) {
+        setSession({
+          token: data.token,
+          user_id: data.user_id,
+          name: data.name,
+        });
+        Alert.alert('Success', 'Successfully login!');
+        router.push('/home');
+      } else {
+        alert(data.message || 'Login failed');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Login error');
+    }
   };
 
 
