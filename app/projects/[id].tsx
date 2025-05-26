@@ -28,10 +28,10 @@ const mockProject: Project = {
   project_end_time: '2025-05-30T18:00:00',
   estimated_loading: 12,
   milestones: [
-    { milestone_id: 'ms001', milestone_name: 'Research Phase', ddl: '2025-05-20T18:00:00', progress: 1.0 },
-    { milestone_id: 'ms002', milestone_name: 'Design Phase', ddl: '2025-05-24T18:00:00', progress: 0.6 },
-    { milestone_id: 'ms003', milestone_name: 'Implementation Phase', ddl: '2025-05-27T18:00:00', progress: 0.0 },
-    { milestone_id: 'ms004', milestone_name: 'Final Report Submission', ddl: '2025-05-30T18:00:00', progress: 0.0 },
+    { milestone_id: 'ms001', milestone_name: 'Milestone #1', ddl: '2025-05-20T18:00:00', progress: 1.0 },
+    { milestone_id: 'ms002', milestone_name: 'Milestone #2', ddl: '2025-05-24T18:00:00', progress: 0.6 },
+    { milestone_id: 'ms003', milestone_name: 'Milestone #3', ddl: '2025-05-27T18:00:00', progress: 0.0 },
+    { milestone_id: 'ms004', milestone_name: 'Milestone #4', ddl: '2025-05-30T18:00:00', progress: 0.0 },
   ],
 };
 
@@ -105,7 +105,7 @@ export default function ProjectManagementScreen() {
                 );
               }}
             >
-              <Ionicons name="trash-outline" size={24} color="red" />
+              <Ionicons name="trash-outline" size={24} color="#7f1d1d" />
             </TouchableOpacity>
           )}
           <TouchableOpacity onPress={() => { setIsEditing(!isEditing); setShowDeadlinePicker(!showDeadlinePicker); }}>
@@ -117,10 +117,18 @@ export default function ProjectManagementScreen() {
 
         {/* Circle */}
         <View className="items-center mt-2 mb-6 relative">
-          <Circle size={240} progress={project.estimated_loading / 100} color="#f8c8c3" thickness={16} unfilledColor="#eee" borderWidth={0} showsText={false} />
-          <View className="absolute items-center justify-center h-60 w-60">
-            <Text className="mt-2 text-gray-600 font-medium">Estimated Loading</Text>
-            <Text className="text-2xl font-bold">{project.estimated_loading}</Text>
+          <Circle 
+            size={240} 
+            progress={project.estimated_loading / 100} 
+            color="#f8c8c3" 
+            thickness={16} 
+            unfilledColor="#eee" 
+            borderWidth={0} 
+            showsText={false} 
+          />
+          <View className="absolute inset-0 items-center justify-center">
+            <Text className="text-gray-600 font-medium">Estimated Loading</Text>
+            <Text className="text-4xl font-bold">{project.estimated_loading}</Text>
             <Text className="text-sm text-gray-600">Hours</Text>
           </View>
         </View>
@@ -135,7 +143,7 @@ export default function ProjectManagementScreen() {
             <View className="flex-row items-center mb-2">
               <Text className="text-sm text-gray-500 mr-2">Project Name:</Text> 
               <TextInput
-                className="text-sm text-center bg-white border rounded-lg p-2"
+                className="text-sm text-center bg-white border rounded-lg py-2 px-3 border-transparent"
                 value={name}
                 onChangeText={setName}
                 placeholder="Project Name"
@@ -144,13 +152,17 @@ export default function ProjectManagementScreen() {
             <View className="flex-row items-center">
               <Text className="text-sm text-gray-500 mr-2">Deadline:</Text> 
             {showDeadlinePicker ? (
-                <DateTimePicker
+                <View style={{ 
+                  alignItems: 'center',
+                  transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] // Scale down to 80%
+                }}>
+                  <DateTimePicker
                     value={deadline}
                     mode="date"
                     display={Platform.OS === 'ios' ? 'compact' : 'default'}
-                    onChange={(_, date) => date && setDeadline(date)}
-                    style={{ width: 120, height: 20 }}
-                />
+                    onChange={(_, date) => date && setDeadline(date)} 
+                  />
+                </View>
             ) : (
                 <Text>{deadline.toDateString()}</Text>
             )}
@@ -161,10 +173,10 @@ export default function ProjectManagementScreen() {
             <>
               <View className="flex-col items-start gap-2 mt-4">
                 <Text className="text-sm text-gray-500 mr-2">Project summary:</Text> 
-                <TextInput className="text-sm text-gray-700 bg-white p-2 rounded-lg border mt-1 mb-2" multiline value={summary} onChangeText={setSummary} />
+                <TextInput className="text-sm text-gray-700 bg-white p-2 rounded-lg border mt-1 mb-2 border-transparent" multiline value={summary} onChangeText={setSummary} />
               </View>
              
-             <TouchableOpacity onPress={handleSave} className="bg-[#F8C8C3] py-2 px-4 rounded-lg mt-4 self-end">
+             <TouchableOpacity onPress={handleSave} className="bg-[#F29389] py-2 px-4 rounded-lg mt-4 self-end">
                 <Text className="text-white font-semibold text-center">Save</Text>
               </TouchableOpacity>
             </>

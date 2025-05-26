@@ -70,10 +70,18 @@ export default function MilestoneDetailScreen() {
 
       <ScrollView className="flex-1 px-4">
         <View className="items-center mt-2 mb-6 relative">
-          <Circle size={240} progress={dummyMilestone.estimated_loading / 10} color="#f8c8c3" thickness={16} unfilledColor="#eee" borderWidth={0} showsText={false} />
-          <View className="absolute items-center justify-center h-60 w-60">
-            <Text className="mt-2 text-gray-600 font-medium">Estimated Loading</Text>
-            <Text className="text-2xl font-bold">{dummyMilestone.estimated_loading}</Text>
+          <Circle 
+            size={240} 
+            progress={dummyMilestone.estimated_loading / 10} 
+            color="#f8c8c3" 
+            thickness={16} 
+            unfilledColor="#eee" 
+            borderWidth={0} 
+            showsText={false} 
+          />
+          <View className="absolute inset-0 items-center justify-center">
+            <Text className="text-gray-600 font-medium">Estimated Loading</Text>
+            <Text className="text-4xl font-bold">{dummyMilestone.estimated_loading}</Text>
             <Text className="text-sm text-gray-600">Hours</Text>
           </View>
         </View>
@@ -86,13 +94,17 @@ export default function MilestoneDetailScreen() {
             <View className="flex-row items-center">
               <Text className="text-sm text-gray-500 mr-2">Deadline:</Text> 
             {showDeadlinePicker ? (
-                <DateTimePicker
-                    value={deadline}
-                    mode="date"
-                    display={Platform.OS === 'ios' ? 'compact' : 'default'}
-                    onChange={(_, date) => date && setDeadline(date)}
-                    style={{ width: 120, height: 20 }}
-                />
+                <View style={{ 
+                    alignItems: 'center',
+                    transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] // Scale down to 80%
+                  }}>
+                    <DateTimePicker
+                        value={deadline}
+                        mode="date"
+                        display={Platform.OS === 'ios' ? 'compact' : 'default'}
+                        onChange={(_, date) => date && setDeadline(date)}
+                    />
+                </View>
             ) : (
                 <Text>{deadline.toDateString()}</Text>
             )}
@@ -102,7 +114,7 @@ export default function MilestoneDetailScreen() {
 
           {isEditingMilestone ? (
             <>
-              <TextInput className="text-sm text-gray-700 bg-white p-2 rounded-lg border mt-1 mb-2" multiline value={summary} onChangeText={setSummary} />
+              <TextInput className="text-sm text-gray-700 bg-white p-2 rounded-lg mt-1 mb-2 border border-transparent" multiline value={summary} onChangeText={setSummary} />
 
               {/* <Text className="text-sm font-semibold text-gray-700 mt-2">Start Time</Text>
               <DateTimePicker value={startTime} mode="date" display={Platform.OS === 'ios' ? 'spinner' : 'default'} onChange={(event, date) => date && setStartTime(date)} />
@@ -135,59 +147,64 @@ export default function MilestoneDetailScreen() {
                 }
                 setIsEditingTasks(!isEditingTasks);
               }}
-              className="px-3 py-1 rounded-full bg-[#F8C8C3]"
+              className="px-3 py-1 rounded-full bg-[#F29389]"
             >
               <Text className="text-white text-sm font-semibold">{isEditingTasks ? 'Done' : 'Edit Tasks'}</Text>
             </TouchableOpacity>
           </View>
 
           {tasks.map((task, index) => (
-            <View key={task.task_id} className="flex-row items-center bg-gray-50 p-3 mb-3 rounded-lg border border-gray-200">
+            <View key={task.task_id} className="flex-row items-center bg-gray-50 p-3 mb-3 rounded-lg">
               {!isEditingTasks ? (
                 <>
                   <Checkbox value={task.isCompleted} onValueChange={() => toggleTask(index)} color={task.isCompleted ? '#f8c8c3' : undefined} />
                   <View className="ml-3 flex-1">
                     <Text className="font-medium">{task.task_name}</Text>
-                    <Text className="text-sm text-gray-500">{new Date(task.task_ddl_day).toLocaleString()}</Text>
+                    <Text className="text-sm text-gray-500">{new Date(task.task_ddl_day).toLocaleDateString()}</Text>
                   </View>
                 </>
               ) : (
                 <View className="flex-1">
-                  <TextInput
-                    value={task.task_name}
-                    onChangeText={(text) => {
-                      const updated = [...tasks];
-                      updated[index].task_name = text;
-                      setTasks(updated);
-                    }}
-                    placeholder="Task Title"
-                    className="bg-white border rounded-lg px-2 py-1 text-sm mb-1"
-                  />
-                  <TouchableOpacity onPress={() => setShowTaskDatePickerIndex(index)} className="bg-white border rounded-lg px-2 py-2">
-                    <Text className="text-sm text-gray-600">{new Date(task.task_ddl_day).toLocaleString()}</Text>
-                  </TouchableOpacity>
-
-                  {showTaskDatePickerIndex === index && (
-                    <DateTimePicker
-                      value={new Date(task.task_ddl_day)}
-                      mode="date"
-                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                      onChange={(event, date) => {
-                        if (date) {
-                          const updated = [...tasks];
-                          updated[index].task_ddl_day = date.toISOString();
-                          setTasks(updated);
-                        }
-                        setShowTaskDatePickerIndex(-1);
+                  <View className='flex-row items-center gap-2'>
+                    <Text className="text-xs text-gray-600 mb-1">Task title:</Text>
+                    <TextInput
+                      value={task.task_name}
+                      onChangeText={(text) => {
+                        const updated = [...tasks];
+                        updated[index].task_name = text;
+                        setTasks(updated);
                       }}
+                      placeholder="Task Title"
+                      className="bg-white rounded-lg py-2 px-3 text-sm mb-2"
                     />
-                  )}
+                  </View>
+                  
+                  <View className="mt-2 flex-row items-center">
+                    <Text className="text-xs text-gray-600 mb-1">Due date:</Text>
+                    <View style={{ 
+                      alignItems: 'center',
+                      transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] // Scale down to 80%
+                    }}>
+                        <DateTimePicker
+                          value={new Date(task.task_ddl_day)}
+                          mode="date"
+                          display={Platform.OS === 'ios' ? 'compact' : 'default'}
+                          onChange={(event, date) => {
+                            if (date) {
+                              const updated = [...tasks];
+                              updated[index].task_ddl_day = date.toISOString();
+                              setTasks(updated);
+                            }
+                          }}
+                        />
+                    </View>
+                  </View>
                 </View>
               )}
 
               {isEditingTasks && (
                 <TouchableOpacity onPress={() => setTasks(tasks.filter((_, i) => i !== index))} className="ml-3 p-1">
-                  <Ionicons name="trash-outline" size={20} color="red" />
+                  <Ionicons name="trash-outline" size={20} color="#7f1d1d" />
                 </TouchableOpacity>
               )}
             </View>
@@ -208,11 +225,13 @@ export default function MilestoneDetailScreen() {
                   isCompleted: false,
                 }]);
               }}
-              className="mt-2 self-end bg-[#F8C8C3] px-4 py-2 rounded-lg"
+              className="mt-2 self-end bg-[#F29389] px-4 py-2 rounded-lg"
             >
               <Text className="text-white font-semibold">+ Add Task</Text>
             </TouchableOpacity>
           )}
+          
+          
         </View>
       </ScrollView>
     </SafeAreaView>
