@@ -1,18 +1,46 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSession } from '../context/SessionContext';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+// console.log('API_URL:', API_URL);
 
 export default function Register() {
   const router = useRouter();
+  const { setSession } = useSession(); 
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const onRegister = () => {
-    // TODO: Add validation and backend integration
-    router.push('./home');
+  const onRegister = async () => {
+    try {
+      const response = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      const data = await response.json();
+
+      console.log('Register response:', data);
+      if (response.ok) {
+        setSession({
+          token: data.token,
+          user_id: data.user_id,
+          name: data.name,
+        });
+        Alert.alert('Success', 'Account created!');
+        router.push('/home');
+      } else {
+        Alert.alert('Error', data.message || 'Registration failed');
+      }
+    } catch (err) {
+      console.error('Register error:', err);
+      Alert.alert('Error', 'Something went wrong');
+    }
   };
 
   return (
