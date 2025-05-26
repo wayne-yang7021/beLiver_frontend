@@ -120,7 +120,7 @@ export default function HomeScreen() {
       <View className="px-6 mt-6 flex-row gap-12 justify-between items-center m-2">
         <View>
           <Text className="text-3xl font-semibold text-[#5E1526]">Good morning,</Text>
-          <Text className="text-3xl font-semibold text-[#5E1526]">Sandy Liu !</Text>
+          <Text className="text-3xl font-semibold text-[#5E1526]">{session?.name} !</Text>
         </View>
         <Image source={require('../assets/images/liver.png')} className="w-32 h-28" style={{ resizeMode: 'contain' }} />
       </View>

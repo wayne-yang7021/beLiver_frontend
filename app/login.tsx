@@ -10,7 +10,7 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000'
 
 export default function Login() {
   const router = useRouter();
-  const { setSession } = useSession();
+  const { session, setSession } = useSession();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
