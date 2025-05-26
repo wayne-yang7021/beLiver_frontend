@@ -115,7 +115,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      <View className="px-6 mt-6 flex-row gap-12 items-center m-2">
+      <View className="px-6 mt-6 flex-row gap-12 justify-between items-center m-2">
         <View>
           <Text className="text-3xl font-semibold text-red-900">Good morning,</Text>
           <Text className="text-3xl font-semibold text-red-900">Sandy Liu !</Text>
@@ -157,7 +157,7 @@ export default function HomeScreen() {
         </Pressable>
       </View>
       
-      <View className="bg-white rounded-t-3xl shadow-lg mx-4 mt-6 pb-4 flex-1">
+      <View className="bg-white rounded-3xl shadow-lg mx-4 mt-6 pb-4 flex-1">
         <View className="flex-row justify-between items-center pr-6 pl-6 mt-4">
           <Text className="text-lg font-semibold text-red-900">
             {selectedDateIndex === 30 ? 'Today\'s Tasks' : `Tasks for ${selectedDate.toLocaleDateString()}`}
