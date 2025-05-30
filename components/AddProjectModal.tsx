@@ -83,7 +83,7 @@ export default function AddProjectModal({
             <View className="w-10 h-1.5 rounded-full bg-gray-300" />
           </View>
           <TouchableOpacity onPress={onClose} className="absolute right-6 top-4">
-            <Text className="text-pink-500 font-bold">Cancel</Text>
+            <Text className="text-[#F29389] font-bold">Cancel</Text>
           </TouchableOpacity>
 
           <Text className="text-xl font-bold text-center">Add New Project</Text>
@@ -110,7 +110,7 @@ export default function AddProjectModal({
             <Pressable onPress={() => setShowPicker(true)}>
               <View className="flex-row gap-2">
                 <View className="flex-1 rounded bg-gray-100 px-4 py-2 justify-center">
-                  <Text className="text-pink-500">
+                  <Text className="text-[#F29389]">
                     {deadline.toLocaleDateString(undefined, {
                       year: 'numeric',
                       month: 'short',
@@ -119,7 +119,7 @@ export default function AddProjectModal({
                   </Text>
                 </View>
                 <View className="flex-1 rounded bg-gray-100 px-4 py-2 justify-center">
-                  <Text className="text-pink-500">
+                  <Text className="text-[#F29389]">
                     {deadline.toLocaleTimeString(undefined, {
                       hour: '2-digit',
                       minute: '2-digit',
@@ -172,11 +172,17 @@ export default function AddProjectModal({
 
           {/* Upload File Button */}
           <TouchableOpacity
-            className="mt-4 p-4 rounded-xl border-2 border-dashed border-[#F29389] bg-[#F8C8C3] bg-opacity-20"
+            className="mt-4 p-4 rounded-xl border border-dashed border-[#F29389] bg-[#F8C8C3] bg-opacity-20 gap-2"
             onPress={pickDocument}
           >
-            <Text className="text-center text-[#5E1526] font-semibold">
-              + Upload your project requirements file (.docx or .pdf)
+            <Text className="text-center text-[#5E1526] font-semibold text-2xl py-2">
+              + 
+            </Text>
+            <Text className="text-center text-md text-[#5E1526] font-semibold">
+              Upload your project requirements file
+            </Text>
+            <Text className="text-center text-md text-[#5E1526] font-semibold mb-4">
+              (.docx or .pdf)
             </Text>
           </TouchableOpacity>
 
@@ -211,13 +217,13 @@ export default function AddProjectModal({
               onSubmitEditing={sendMessage}
             />
             <TouchableOpacity onPress={sendMessage}>
-              <Text className="ml-2 text-pink-400 text-lg">➤</Text>
+              <Text className="ml-2 text-[#F29389] text-lg">➤</Text>
             </TouchableOpacity>
           </View>
 
           {/* Add Button */}
           <TouchableOpacity
-            className="mt-4 bg-[#5E1526] rounded-full py-3"
+            className="mt-4 bg-[#5E1526] rounded-full py-3 px-6 w-fit mx-auto"
             onPress={onClose}
           >
             <Text className="text-center text-white font-semibold">+ Add</Text>

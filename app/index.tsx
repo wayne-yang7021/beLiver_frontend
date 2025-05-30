@@ -1,21 +1,26 @@
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { Text, View } from 'react-native';
+import { useSession } from '../context/SessionContext';
 import '../global.css';
 
 export default function IndexRedirect() {
   const router = useRouter();
+  const { session, isLoaded } = useSession();
 
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (router.canGoBack === undefined || router.replace === undefined) return;
+    if (!isLoaded) return;
 
-      // 等待 router 準備好
-      router.replace('/login');
-    }, 50); // 延遲一點點也可以避免錯誤
+    const timeout = setTimeout(() => {
+      if (session) {
+        router.replace('/home');
+      } else {
+        router.replace('/login');
+      }
+    }, 10);
 
     return () => clearTimeout(timeout);
-  }, [router]);
+  }, [session, isLoaded, router]);
 
   return (
     <View className="flex-1 justify-center items-center bg-white">

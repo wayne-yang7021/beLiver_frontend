@@ -1,19 +1,17 @@
 import { Stack } from 'expo-router';
+import { SessionProvider } from '../context/SessionContext'; // 你放哪裡就改這裡
 import '../global.css';
 
 export default function RootLayout() {
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        animation: 'fade',
-        contentStyle: { backgroundColor: 'transparent' },
-      }}
-    >
-      <Stack.Screen name="index" />      {/* 導向 login */}
-      <Stack.Screen name="login" />
-      <Stack.Screen name="register" />
-      <Stack.Screen name="(tabs)" />
-    </Stack>
+    <SessionProvider>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          animation: 'fade',
+          contentStyle: { backgroundColor: 'transparent' },
+        }}
+      />
+    </SessionProvider>
   );
 }

@@ -15,6 +15,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSession } from '../context/SessionContext';
 
 interface Task {
   id: string;
@@ -30,6 +31,7 @@ const screenWidth = Dimensions.get('window').width;
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { session } = useSession();
   const [tasks, setTasks] = useState<Task[]>([
     {
       id: '1',
@@ -115,10 +117,10 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      <View className="px-6 mt-6 flex-row gap-12 items-center m-2">
+      <View className="px-6 mt-6 flex-row gap-12 justify-between items-center m-2">
         <View>
-          <Text className="text-3xl font-semibold text-red-900">Good morning,</Text>
-          <Text className="text-3xl font-semibold text-red-900">Sandy Liu !</Text>
+          <Text className="text-3xl font-semibold text-[#5E1526]">Good morning,</Text>
+          <Text className="text-3xl font-semibold text-[#5E1526]">{session?.name} !</Text>
         </View>
         <Image source={require('../assets/images/liver.png')} className="w-32 h-28" style={{ resizeMode: 'contain' }} />
       </View>
@@ -157,7 +159,7 @@ export default function HomeScreen() {
         </Pressable>
       </View>
       
-      <View className="bg-white rounded-t-3xl shadow-lg mx-4 mt-6 pb-4 flex-1">
+      <View className="bg-white rounded-3xl shadow-lg mx-4 mt-6 pb-4 flex-1">
         <View className="flex-row justify-between items-center pr-6 pl-6 mt-4">
           <Text className="text-lg font-semibold text-red-900">
             {selectedDateIndex === 30 ? 'Today\'s Tasks' : `Tasks for ${selectedDate.toLocaleDateString()}`}
