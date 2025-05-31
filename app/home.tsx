@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { addDays, subDays } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -17,13 +17,16 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSession } from '../context/SessionContext';
 
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+
 interface Task {
-  id: string;
-  title: string;
-  details?: string;
-  etc?: string;
-  done: boolean;
-  date: string;
+  task_id: string;
+  task_title: string;
+  description?: string;
+  estimated_loading?: number;
+  isCompleted: boolean;
+  project_id?: string;
+  date?: string;
 }
 
 const ITEM_WIDTH = 72;
@@ -32,31 +35,106 @@ const screenWidth = Dimensions.get('window').width;
 export default function HomeScreen() {
   const router = useRouter();
   const { session } = useSession();
-  const [tasks, setTasks] = useState<Task[]>([
-    {
-      id: '1',
-      title: 'Discuss about the work',
-      details: 'Design and compile the presentation for the upcoming internal project review. The slides should cover key project objectives, timeline, resource allocation, and expected outcomes.',
-      etc: '1.5 hrs',
-      done: false,
-      date: new Date().toDateString(),
-    },
-    { id: '2', title: 'SAD Interview 2 people', done: false, date: new Date().toDateString() },
-    { id: '3', title: 'SAD Figma', done: false, date: addDays(new Date(), 1).toDateString() },
-    { id: '4', title: 'SAD Slide', done: true, date: subDays(new Date(), 1).toDateString() },
-    { id: '5', title: 'SAD Report', done: true, date: subDays(new Date(), 2).toDateString() },
-  ]);
+  const [tasks, setTasks] = useState<Task[]>([]);
 
   const [selectedDateIndex, setSelectedDateIndex] = useState(30);
   const [editVisible, setEditVisible] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editTitle, setEditTitle] = useState('');
-  const [editEtc, setEditEtc] = useState('');
+  const [editEtc, setEditEtc] = useState(0);
+  // const [editEtcUnit, setEditEtcUnit] = useState<'mins' | 'hrs'>('mins');
+  // const [editEtc, setEditEtc] = useState('0'); // 以小時為單位，例如 '1.5'
   const [editDetails, setEditDetails] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
 
   const scrollViewRef = useRef<ScrollView>(null);
   const scrollX = useRef(0);
+
+  const today = new Date();
+  const dates = Array.from({ length: 61 }, (_, i) => subDays(today, 30 - i));
+  const selectedDate = dates[selectedDateIndex];
+  const selectedDateFormatted = format(selectedDate, 'yyyy-MM-dd');
+
+  useEffect(() => {
+    const fetchTasks = async () => {
+      // console.log(`${API_URL}/tasks?date=${selectedDateFormatted}`);
+
+      try {
+        const response = await fetch(`${API_URL}/tasks?date=${selectedDateFormatted}`, {
+          headers: {
+            // 'accept': 'application/json',
+            'Authorization': `Bearer ${session?.token}`,
+          },
+        });
+        if (!response.ok) {
+          throw new Error('Failed to fetch tasks');
+        }
+        const data = await response.json();
+        // console.log('Fetched tasks:', data);
+        const enrichedTasks = data.map((task: Task) => ({ ...task, date: selectedDate.toDateString() }));
+        setTasks(enrichedTasks);
+      } catch (err) {
+        console.error(err);
+        Alert.alert('Error', 'Failed to load tasks');
+      }
+    };
+
+    fetchTasks();
+  }, [selectedDateFormatted]);
+
+
+  const saveEditedTask = async () => {
+    if (!editingTask) return;
+
+    if (!editTitle.trim() || !editEtc) {
+      Alert.alert('Error', 'You must fill in the name and the time');
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/tasks/${editingTask.task_id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.token}`,
+        },
+        body: JSON.stringify({
+          title: editTitle,
+          description: editDetails,
+          estimated_loading: editEtc,
+          due_date: selectedDateFormatted,
+        }),
+      });
+
+      if (!res.ok) throw new Error('Failed to update task');
+
+      const updatedTask = {
+        ...editingTask,
+        task_title: editTitle,
+        estimated_loading: editEtc,
+        description: editDetails,
+      };
+
+      setTasks(tasks =>
+        tasks.map(task =>
+          task.task_id === editingTask.task_id ? updatedTask : task
+        )
+      );
+
+      Alert.alert('Success', 'Task updated successfully!');
+    } catch (err) {
+      Alert.alert('Error', 'Failed to update task');
+      console.error(err);
+    } finally {
+      setEditVisible(false);
+      setEditingTask(null);
+    }
+  };
+
+
+  // useEffect(() => {
+  //   fetchTasks();
+  // }, [selectedDateIndex]);
 
   useEffect(() => {
     setTimeout(() => {
@@ -67,42 +145,39 @@ export default function HomeScreen() {
     }, 100);
   }, []);
 
-  const toggleTaskDone = (id: string) => {
-    const updated = tasks.map(task => task.id === id ? { ...task, done: !task.done } : task);
-    updated.sort((a, b) => Number(a.done) - Number(b.done));
-    setTasks(updated);
+  const toggleTaskDone = async (task: Task) => {
+    try {
+      const updated = tasks.map(t =>
+        t.task_id === task.task_id ? { ...t, isCompleted: !t.isCompleted } : t
+      );
+      setTasks(updated);
+
+      console.log('Toggling task:', task.task_id, 'to', !task.isCompleted);
+      const res = await fetch(`${API_URL}/tasks/${task.task_id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.token}`,
+        },
+        body: JSON.stringify({ isCompleted: !task.isCompleted }),
+      });
+
+      if (!res.ok) throw new Error('Failed to update task');
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Error', 'Failed to update task status');
+    }
   };
 
   const openEditModal = (task: Task) => {
     setEditingTask(task);
-    setEditTitle(task.title);
-    setEditEtc(task.etc || '');
-    setEditDetails(task.details || '');
+    setEditTitle(task.task_title);
+    setEditEtc(task.estimated_loading || 0);
+    setEditDetails(task.description || '');
     setEditVisible(true);
   };
 
-  const saveEditedTask = () => {
-    if (editingTask) {
-      const updated = tasks.map(task => task.id === editingTask.id ? { ...task, title: editTitle, etc: editEtc, details: editDetails } : task);
-      setTasks(updated);
-      Alert.alert('Success', 'Task updated successfully!');
-    }
-    setEditVisible(false);
-    setEditingTask(null);
-  };
-
-  const deleteTask = (id: string) => {
-    Alert.alert('Delete Task', 'Are you sure you want to delete this task?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => setTasks(tasks.filter(task => task.id !== id)) },
-    ]);
-  };
-
-  const today = new Date();
-  const dates = Array.from({ length: 61 }, (_, i) => subDays(today, 30 - i));
-  const selectedDate = dates[selectedDateIndex];
-  const selectedDateString = selectedDate.toDateString();
-  const filteredTasks = tasks.filter(task => task.date === selectedDateString);
+  const filteredTasks = tasks.filter(task => task.date === selectedDate.toDateString());
 
   return (
     <SafeAreaView className="flex-1 bg-[#F8C8C3]">
@@ -165,9 +240,7 @@ export default function HomeScreen() {
             {selectedDateIndex === 30 ? 'Today\'s Tasks' : `Tasks for ${selectedDate.toLocaleDateString()}`}
           </Text>
           <TouchableOpacity onPress={() => setIsEditMode(!isEditMode)}>
-            <Text className={`font-medium ${isEditMode ? 'text-red-500' : 'text-[#F8C8C3]'}`}>
-              {isEditMode ? 'Done' : 'Edit'}
-            </Text>
+            <Text className={`font-medium ${isEditMode ? 'text-red-500' : 'text-[#F8C8C3]'}`}>{isEditMode ? 'Done' : 'Edit'}</Text>
           </TouchableOpacity>
         </View>
 
@@ -178,47 +251,40 @@ export default function HomeScreen() {
             </View>
           ) : (
             filteredTasks.map((task) => (
-              <View key={task.id} className="mb-4 rounded-3xl p-4 bg-[#F8C8C3]">
+              <View key={task.task_id} className="mb-4 rounded-3xl p-4 bg-[#F8C8C3]">
                 <View className="flex-row justify-between items-start">
-                  <TouchableOpacity 
-                    onPress={() => openEditModal(task)}
-                    className="flex-1"
-                  >
-                    <Text className="text-red-800 font-bold">{task.title}</Text>
+                  <TouchableOpacity className="flex-1">
+                    <Text className="text-red-800 font-bold">{task.task_title}</Text>
                   </TouchableOpacity>
-                  {task.etc && (
+                  {task.estimated_loading && (
                     <View className="ml-4">
-                      <Text className="text-red-800">ETC: {task.etc}</Text>
+                      <Text className="text-red-800">ETC: <Text className='font-semibold'>{task.estimated_loading} hrs</Text></Text>
                     </View>
                   )}
                 </View>
-                
-                {task.details && (
+                {task.description && (
                   <View className="mt-3 mb-3">
-                    <Text className="text-red-700 text-justify leading-5">
-                      {task.details}
-                    </Text>
+                    <Text className="text-red-700 text-justify leading-5">{task.description}</Text>
                   </View>
                 )}
-                
                 <View className="flex-row justify-between items-center mt-2">
                   <View className="flex-1" />
                   <View className="flex-row items-center">
                     {isEditMode && (
-                      <TouchableOpacity 
-                        className="mr-4 p-2" 
-                        onPress={() => deleteTask(task.id)}
-                      >
-                        <Feather name="trash-2" size={20} color="#ef4444" />
-                      </TouchableOpacity>
-                    )}
-                    <TouchableOpacity onPress={() => toggleTaskDone(task.id)}>
+                        <>
+                          <TouchableOpacity className="mr-2 p-2" onPress={() => openEditModal(task)}>
+                            <Feather name="edit-2" size={20} color="#991b1b" />
+                          </TouchableOpacity>
+                          <TouchableOpacity className="mr-4 p-2" onPress={() => Alert.alert('Not implemented in API')}>
+                            <Feather name="trash-2" size={20} color="#ef4444" />
+                          </TouchableOpacity>
+                        </>
+                      )}
+                    <TouchableOpacity onPress={() => toggleTaskDone(task)}>
                       <View className={`w-6 h-6 rounded-full justify-center items-center ${
-                        task.done ? 'bg-red-500' : 'bg-white border border-red-300'
+                        task.isCompleted ? 'bg-red-500' : 'bg-white border border-red-300'
                       }`}>
-                        {task.done && (
-                          <Text className="text-white text-xs">✓</Text>
-                        )}
+                        {task.isCompleted && <Text className="text-white text-xs">✓</Text>}
                       </View>
                     </TouchableOpacity>
                   </View>
@@ -260,16 +326,24 @@ export default function HomeScreen() {
                 
                 {/* Estimated Time Input */}
                 <View className="mb-4">
-                  <Text className="text-red-900 font-semibold mb-2 text-base">Estimated Time</Text>
-                  <TextInput 
-                    className="bg-pink-50 p-3 rounded-xl border border-pink-200 text-base" 
-                    value={editEtc} 
-                    onChangeText={setEditEtc} 
-                    placeholder="e.g. 1.5 hrs, 30 mins"
-                    placeholderTextColor="#9ca3af"
-                  />
+                  <Text className="text-red-900 font-semibold mb-2 text-base">Estimated Time (hours)</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
+                  {[0.5, 1, 1.5, 2, 3, 4].map((val) => (
+                    <TouchableOpacity
+                    key={val}
+                    onPress={() => setEditEtc(val)}
+                    className={`px-4 py-2 rounded-xl border ${
+                      editEtc === val ? 'bg-[#F29389] border-[#F29389]' : 'bg-white border-gray-300'
+                    } mr-2`}
+                    >
+                    <Text className={`font-semibold ${editEtc === val ? 'text-white' : 'text-gray-700'}`}>
+                      {val}
+                    </Text>
+                    </TouchableOpacity>
+                  ))}
+                  </ScrollView>
                 </View>
-                
+
                 {/* Details Input */}
                 <View className="mb-6">
                   <Text className="text-red-900 font-semibold mb-2 text-base">Task Details</Text>
