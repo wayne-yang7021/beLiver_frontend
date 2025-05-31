@@ -13,7 +13,8 @@ export default function IndexRedirect() {
 
     const timeout = setTimeout(() => {
       if (session) {
-        router.replace('/home');
+        // router.replace('/home');
+        router.replace('/login');
       } else {
         router.replace('/login');
       }

@@ -1,9 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useFocusEffect } from '@react-navigation/native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, Platform, SafeAreaView, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Circle } from 'react-native-progress';
+import { useSession } from '../../context/SessionContext';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000'
 
 type Milestone = {
   milestone_id: string;
@@ -20,7 +24,6 @@ type Project = {
   estimated_loading: number;
   milestones: Milestone[];
 };
-
 const mockProject: Project = {
   project_name: 'SAD Final Project',
   project_summary: 'System Analysis and Design final project presentation for a real-world information system.',
@@ -37,37 +40,98 @@ const mockProject: Project = {
 
 export default function ProjectManagementScreen() {
   const { id } = useLocalSearchParams();
+  const { session } = useSession();
   const router = useRouter();
   const [project, setProject] = useState<Project | null>(null);
 
   // Editing State
   const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState(mockProject.project_name);
-  const [summary, setSummary] = useState(mockProject.project_summary);
-  // const [startDate, setStartDate] = useState<Date>(new Date());
-  // const [endDate, setEndDate] = useState<Date>(new Date());
-  const [deadline, setDeadline] = useState(new Date(mockProject.project_end_time));
-  const [showDeadlinePicker, setShowDeadlinePicker] = useState(false);
+  const [name, setName] = useState('');
+  const [summary, setSummary] = useState('');
+  const [deadline, setDeadline] = useState(new Date());
 
   useEffect(() => {
-    setProject(mockProject);
-  }, [id]);
+    if (project) {
+      setName(project.project_name);
+      setSummary(project.project_summary);
+      setDeadline(new Date(project.project_end_time));
+    }
+  }, [project]);
+  const [showDeadlinePicker, setShowDeadlinePicker] = useState(false);
+  
 
-  const handleSave = () => {
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!id) return;
+
+      const fetchProject = async () => {
+        try {
+          const res = await fetch(`${API_URL}/project_detail?project_id=${id}`, {
+            headers: {
+              Authorization: `Bearer ${session?.token}`,
+            },
+          });
+          if (!res.ok) {
+            const errorText = await res.text();
+            console.error('Failed to fetch project:', errorText);
+            throw new Error('Failed to fetch project');
+          }
+          const data = await res.json();
+          setProject(data);
+        } catch {
+          setProject(null);
+          Alert.alert('Error', 'Failed to load project.');
+        }
+      };
+
+      fetchProject();
+    }, [id, session])
+  );
+
+  const handleSave = async () => {
     if (!name.trim() || !summary.trim()) {
-      alert('Fields cannot be empty.');
+      Alert.alert('Error', 'Fields cannot be empty.');
       return;
     }
 
-    setProject((prev) => prev && ({
-      ...prev,
-      project_name: name,
-      project_summary: summary,
-      project_deadline: deadline.toISOString(),
-    }));
+    try {
+      const res = await fetch(`${API_URL}/project_detail`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.token}`,
+        },
+        body: JSON.stringify({
+          project_id: id,
+          changed_name: name,
+          changed_project_summary: summary,
+          changed_project_start_time: project?.project_start_time,
+          changed_project_end_time: deadline.toISOString(),
+        }),
+      });
 
-    setShowDeadlinePicker(false);
-    setIsEditing(false);
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('Failed to update project:', errorText);
+        Alert.alert('Error', 'Failed to update project.');
+        return;
+      }
+
+      setProject((prev) => prev && ({
+        ...prev,
+        project_name: name,
+        project_summary: summary,
+        project_end_time: deadline.toISOString(),
+      }));
+
+      setShowDeadlinePicker(false);
+      setIsEditing(false);
+      Alert.alert('Success', 'Project updated successfully.');
+    } catch (error) {
+      console.error('Error updating project:', error);
+      Alert.alert('Error', 'Failed to update project.');
+    }
   };
 
   if (!project) return null;
@@ -187,14 +251,14 @@ export default function ProjectManagementScreen() {
           )}
         </View>
 
-
+        <Text className="font-bold text-lg mt-6">Milestones</Text>
         {inProgress.length > 0 && (
-          <View className="mt-6">
+          <View className="mt-2">
             <Text className="font-medium text-lg">In Progress</Text>
             {inProgress.map((m) => (
               <TouchableOpacity
                 key={m.milestone_id}
-                onPress={() => router.push({ pathname: '/milestones/[milestone_id]', params: { milestone_id: m.milestone_id } })}
+                onPress={() => router.push({ pathname: '/milestones/[milestone_id]', params: { milestone_id: m.milestone_id, project_id: id } })}
                 className="mt-2 border border-gray-200 rounded-lg p-4"
               >
                 <View className="flex-row justify-between items-center">
@@ -218,7 +282,7 @@ export default function ProjectManagementScreen() {
             {todo.map((m) => (
               <TouchableOpacity
                 key={m.milestone_id}
-                onPress={() => router.push({ pathname: '/milestones/[milestone_id]', params: { milestone_id: m.milestone_id } })}
+                onPress={() => router.push({ pathname: '/milestones/[milestone_id]', params: { milestone_id: m.milestone_id, project_id: id } })}
                 className="mt-2 border border-gray-200 rounded-lg p-4"
               >
                 <View className="flex-row justify-between items-center">
@@ -238,11 +302,16 @@ export default function ProjectManagementScreen() {
           <View className="mt-6 mb-8">
             <Text className="font-medium text-lg">Done</Text>
             {done.map((m) => (
-              <TouchableOpacity
+                <TouchableOpacity
                 key={m.milestone_id}
-                onPress={() => router.push({ pathname: '/milestones/[milestone_id]', params: { milestone_id: m.milestone_id } })}
+                onPress={() =>
+                  router.push({
+                  pathname: '/milestones/[milestone_id]',
+                  params: { milestone_id: m.milestone_id, project_id: id }
+                  })
+                }
                 className="mt-2 border border-gray-200 rounded-lg p-4"
-              >
+                >
                 <View className="flex-row justify-between items-center">
                   <Text className="font-medium">{m.milestone_name}</Text>
                   <Text className="text-sm">ddl: {new Date(m.ddl).toDateString()}</Text>
