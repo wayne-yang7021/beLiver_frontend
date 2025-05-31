@@ -258,7 +258,9 @@ export default function HomeScreen() {
                   </TouchableOpacity>
                   {task.estimated_loading && (
                     <View className="ml-4">
-                      <Text className="text-red-800">ETC: <Text className='font-semibold'>{task.estimated_loading} hrs</Text></Text>
+                      <Text className="text-red-800 font-semibold">
+                        ETC: {task.estimated_loading} hrs
+                      </Text>
                     </View>
                   )}
                 </View>

@@ -263,6 +263,7 @@ export default function Calendar() {
             Authorization: `Bearer ${session.token}`,
           },
         });
+        
 
         if (!res.ok) {
           const errorText = await res.text();

@@ -1,6 +1,7 @@
+import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import * as DocumentPicker from 'expo-document-picker';
+import { Asset } from 'expo-asset';
 import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -38,6 +39,8 @@ export default function AddProjectModal({
   const [input, setInput] = useState('');
   const flatListRef = useRef<FlatList>(null);
   const { session } = useSession();
+  const [stepReady, setStepReady] = useState(false);
+
 
   const storage = {
     set: async (key: string, value: any) => {
@@ -105,23 +108,63 @@ export default function AddProjectModal({
   }, [files, projectId]);
 
 
-  const pickDocument = async () => {
-    try {
-      const result = await DocumentPicker.getDocumentAsync({ multiple: false });
-      if (result.canceled || !result.assets?.length) return;
+   const pickDocument = async () => {
+    // try {
+    //   const result = await DocumentPicker.getDocumentAsync({ multiple: false });
+    //   if (result.canceled || !result.assets?.length) return;
+    //   const file = result.assets[0];
+    //   setFiles(prev => [...prev, file]);
 
-      const file = result.assets[0];
+    //   const formData = new FormData();
+    //   formData.append('file', {
+    //     uri: file.uri,
+    //     name: file.name,
+    //     type: file.mimeType || 'application/pdf',
+    //   } as any);
+
+    //   const res = await fetch(`${API_URL}/assistant/project_draft`, {
+    //     method: 'POST',
+    //     headers: {
+    //       Authorization: `Bearer ${session?.token}`,
+    //     },
+    //     body: formData,
+    //   });
+
+    //   const data = await res.json();
+    //   const draft = JSON.stringify(data.projects?.[0], null, 2);
+    //   setChatMessages(prev => [
+    //     ...prev,
+    //     { text: `📎 Uploaded file: ${file.name}`, from: 'user', timestamp: new Date().toISOString() },
+    //     { text: '```json\n' + draft + '\n```', from: 'bot', timestamp: new Date().toISOString() },
+    //   ]);
+    // } catch (error) {
+    //   console.error('Document picker error:', error);
+    //   Alert.alert('Failed to upload and parse document');
+    // }
+    try {
+      const asset = Asset.fromModule(require('../assets/temp.pdf'));
+      await asset.downloadAsync();
+
+      const file = {
+        uri: asset.localUri || asset.uri,
+        name: 'temp.pdf',
+        type: 'application/pdf',
+      };
+
       setFiles(prev => [...prev, file]);
 
       setChatMessages(prev => [
         ...prev,
-        { text: `📎 Uploaded file: ${file.name}`, from: 'user', timestamp: new Date().toISOString() },
-        { text: 'Thanks, file received!', from: 'bot', timestamp: new Date().toISOString() },
+        {
+          text: `📎 Uploaded file: ${file.name}`,
+          from: 'user',
+          timestamp: new Date().toISOString(),
+        }
       ]);
-
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
+      
     } catch (error) {
-      console.error('Document picker error:', error);
+      console.error('Asset loading error:', error);
+      Alert.alert('Failed to load asset file');
     }
   };
 
@@ -144,7 +187,7 @@ export default function AddProjectModal({
     setInput('');
 
     try {
-      const res = await fetch(`${API_URL}/assistant/previewMessage/stream`, {
+      const res = await fetch(`${API_URL}/assistant/previewMessage`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${session?.token}`,
@@ -258,6 +301,54 @@ export default function AddProjectModal({
     }
   };
 
+
+  const startConversation = async () => {
+    if (files.length === 0) {
+      setChatMessages([{
+        text: '麻煩您提供上述的資訊來，或是如果你並沒有要進行排程的話請直接按下 Add。',
+        from: 'bot',
+        timestamp: new Date().toISOString()
+      }]);
+      setStepReady(true);
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      const file = files[0]; // 只取一個檔案
+      formData.append('file', {
+        uri: file.uri,
+        name: file.name,
+        type: file.mimeType || 'application/pdf',
+      } as any);
+
+      const res = await fetch(`${API_URL}/assistant/project_draft`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session?.token}`,
+        },
+        body: formData,
+      });
+
+      const data = await res.json();
+      const draft = JSON.stringify(data.projects?.[0], null, 2);
+
+      setChatMessages(prev => [
+        ...prev,
+        {
+          text: '```json\n' + draft + '\n```',
+          from: 'bot',
+          timestamp: new Date().toISOString()
+        }
+      ]);
+      setStepReady(true);
+    } catch (e) {
+      console.error(e);
+      Alert.alert('Failed to fetch draft');
+    }
+  };
+
+
   const resetAll = async () => {
     await clearProjectStorage(projectId);
     setTitle('');
@@ -266,6 +357,40 @@ export default function AddProjectModal({
     setChatMessages([]);
     setFiles([]);
   };
+
+  const JsonDisplay = ({ data }: { data: any }) => {
+    return (
+      <View className="gap-2">
+        {data.projects?.map((project: any, i: number) => (
+          <View key={i} className="bg-white p-2 rounded-lg border border-gray-300">
+            <Text className="font-bold text-lg">{project.name}</Text>
+            <Text className="text-sm text-gray-700 mb-1">{project.summary}</Text>
+            <Text className="text-xs text-gray-500">🗓 {project.start_time} → {project.due_date}</Text>
+            <Text className="text-xs text-gray-500 mb-2">⏳ {project.estimated_loading} hrs</Text>
+
+            {project.milestones?.map((m: any, j: number) => (
+              <View key={j} className="mt-2 pl-2 border-l-2 border-pink-300">
+                <Text className="font-semibold">{m.name}</Text>
+                <Text className="text-sm text-gray-600">{m.summary}</Text>
+                <Text className="text-xs text-gray-500">📅 {m.start_time} → {m.end_time}</Text>
+                <Text className="text-xs text-gray-500 mb-1">⏱ {m.estimated_loading} hrs</Text>
+
+                {m.tasks?.map((t: any, k: number) => (
+                  <View key={k} className="ml-2 mt-1 p-2 bg-gray-100 rounded">
+                    <Text className="font-semibold">{t.title}</Text>
+                    <Text className="text-sm">{t.description}</Text>
+                    <Text className="text-xs text-gray-500">📆 Due: {t.due_date}</Text>
+                    <Text className="text-xs text-gray-500">⏱ {t.estimated_loading} hrs</Text>
+                  </View>
+                ))}
+              </View>
+            ))}
+          </View>
+        ))}
+      </View>
+    );
+  };
+
 
 
   return (
@@ -277,9 +402,17 @@ export default function AddProjectModal({
           </View>
 
           {/* Reset 按鈕 */}
-          <TouchableOpacity onPress={resetAll} className="absolute left-6 top-4">
-            <Text className="text-[#F29389] font-bold">Reset</Text>
-          </TouchableOpacity>
+          <View className="absolute left-6 top-4 flex-row items-center gap-4">
+            {!stepReady ? (<TouchableOpacity onPress={resetAll} className="flex-row items-center">
+              <Feather name="rotate-ccw" size={18} color="#F29389" />
+              <Text className="text-[#F29389] font-semibold ml-1">Reset</Text>
+            </TouchableOpacity>
+            ):(
+              <TouchableOpacity onPress={() => setStepReady(false)}>
+                <Text className="text-[#F29389] font-bold">Last</Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
           {/* Cancel 按鈕 */}
           <TouchableOpacity onPress={onClose} className="absolute right-6 top-4">
@@ -288,81 +421,56 @@ export default function AddProjectModal({
 
           <Text className="text-xl font-bold text-center">Add New Project</Text>
 
-          {/* Title */}
-          <View className="mt-4">
-            <Text className="font-semibold text-[#555] mb-1">
-              Your Project Name: <Text className="text-red-500">*</Text>
-            </Text>
-            <TextInput
-              className="bg-gray-100 p-3 rounded text-gray-700"
-              value={title}
-              onChangeText={setTitle}
-              placeholder="project name"
-              placeholderTextColor="#aaa"
-            />
-          </View>
-
-          {/* Deadline */}
-          <View className="mt-4">
-            <Text className="font-semibold text-[#555] mb-1">
-              Deadline: <Text className="text-red-500">*</Text>
-            </Text>
-            <Pressable onPress={() => setShowPicker(true)}>
-              <View className="flex-row gap-2">
-                <View className="flex-1 rounded bg-gray-100 px-4 py-2 justify-center">
-                  <Text className="text-[#F29389]">
-                    {deadline ? deadline.toLocaleDateString() : 'Select date'}
-                  </Text>
-                </View>
-                <View className="flex-1 rounded bg-gray-100 px-4 py-2 justify-center">
-                  <Text className="text-[#F29389]">
-                    {deadline ? deadline.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Select time'}
-                  </Text>
-                </View>
-              </View>
-            </Pressable>
-            {showPicker && Platform.OS === 'ios' && (
-              <DateTimePicker
-                value={deadline || new Date()}
-                onChange={(e, date) => {
-                  if (date) setDeadline(date);
-                  setShowPicker(false);
-                }}
-                mode="datetime"
-                display="spinner"
-                themeVariant="light"
-              />
-            )}
-            {showPicker && Platform.OS === 'android' && (
-              <DateTimePicker
-                value={deadline || new Date()}
-                onChange={(e, date) => {
-                  setShowPicker(false);
-                  if (date) setDeadline(date);
-                }}
-                mode="datetime"
-                display="default"
-              />
-            )}
-          </View>
-
-          {/* 對話與檔案上傳 */}
-          {title.trim() && deadline && (
+          {!stepReady ? (
             <>
-              {files.length > 0 && (
-                <View className="mt-4">
-                  <Text className="font-semibold mb-1">Uploaded Files:</Text>
-                  {files.map((file, index) => (
-                    <View key={index} className="bg-gray-100 p-2 rounded mb-1 flex-row justify-between items-center">
-                      <Text className="text-sm text-gray-700">{file.name}</Text>
-                      <Text className="text-xs text-gray-500">{file.mimeType || 'unknown'}</Text>
+              <View className="mt-4">
+                <Text className="font-semibold text-[#555] mb-1">
+                  Your Project Name: <Text className="text-red-500">*</Text>
+                </Text>
+                <TextInput
+                  className="bg-gray-100 p-3 rounded text-gray-700"
+                  value={title}
+                  onChangeText={setTitle}
+                  placeholder="project name"
+                  placeholderTextColor="#aaa"
+                />
+              </View>
+
+              <View className="mt-4">
+                <Text className="font-semibold text-[#555] mb-1">
+                  Deadline: <Text className="text-red-500">*</Text>
+                </Text>
+                <Pressable onPress={() => setShowPicker(true)}>
+                  <View className="flex-row gap-2">
+                    <View className="flex-1 rounded bg-gray-100 px-4 py-2 justify-center">
+                      <Text className="text-[#F29389]">
+                        {deadline ? deadline.toLocaleDateString() : 'Select date'}
+                      </Text>
                     </View>
-                  ))}
-                </View>
+                    <View className="flex-1 rounded bg-gray-100 px-4 py-2 justify-center">
+                      <Text className="text-[#F29389]">
+                        {deadline ? deadline.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Select time'}
+                      </Text>
+                    </View>
+                  </View>
+                </Pressable>
+              </View>
+
+              {showPicker && (
+                <DateTimePicker
+                  value={deadline || new Date()}
+                  onChange={(e, date) => {
+                    if (date) setDeadline(date);
+                    setShowPicker(false);
+                  }}
+                  mode="datetime"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  themeVariant="light"
+                />
               )}
 
               <TouchableOpacity
-                className="mt-4 p-4 rounded-xl border border-dashed border-[#F29389] bg-[#F8C8C3] bg-opacity-20 gap-2"
+                className="mt-6 p-4 rounded-xl border border-dashed border-[#F29389] bg-[#F8C8C3] bg-opacity-20 gap-2"
                 onPress={pickDocument}
               >
                 <Text className="text-center text-[#5E1526] font-semibold text-2xl py-2">+</Text>
@@ -370,6 +478,16 @@ export default function AddProjectModal({
                 <Text className="text-center text-md text-[#5E1526] font-semibold mb-4">(.docx or .pdf)</Text>
               </TouchableOpacity>
 
+              <TouchableOpacity
+                className={`mt-6 rounded-full py-3 px-6 w-fit mx-auto ${title.trim() && deadline ? 'bg-[#5E1526]' : 'bg-gray-400'}`}
+                disabled={!title.trim() || !deadline}
+                onPress={startConversation}
+              >
+                <Text className="text-center text-white font-semibold">Next</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
               <View className="flex-1 mt-4 mb-2">
                 <FlatList
                   ref={flatListRef}
@@ -395,17 +513,15 @@ export default function AddProjectModal({
                   <Text className="ml-2 text-[#F29389] text-lg">➤</Text>
                 </TouchableOpacity>
               </View>
+
+              <TouchableOpacity
+                className="mt-4 rounded-full py-3 px-6 w-fit mx-auto bg-[#5E1526]"
+                onPress={handleAddProject}
+              >
+                <Text className="text-center text-white font-semibold">+ Add</Text>
+              </TouchableOpacity>
             </>
           )}
-
-          {/* Add 按鈕 */}
-          <TouchableOpacity
-            className={`mt-4 rounded-full py-3 px-6 w-fit mx-auto ${title.trim() && deadline ? 'bg-[#5E1526]' : 'bg-gray-400'}`}
-            disabled={!title.trim() || !deadline}
-            onPress={handleAddProject}
-          >
-            <Text className="text-center text-white font-semibold">+ Add</Text>
-          </TouchableOpacity>
         </View>
       </View>
     </Modal>
