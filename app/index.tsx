@@ -17,6 +17,7 @@ export default function IndexRedirect() {
       } else {
         router.replace('/login');
       }
+      // router.replace('/login');
     }, 10);
 
     return () => clearTimeout(timeout);
