@@ -11,6 +11,16 @@
     "ios": {
       "supportsTablet": true
     },
+    "expo": {
+      "ios": {
+        "usesIcloudStorage": true,
+        "infoPlist": {
+          "UIFileSharingEnabled": true,
+          "LSSupportsOpeningDocumentsInPlace": true
+        }
+      }
+    },
+
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",

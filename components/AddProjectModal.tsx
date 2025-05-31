@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Asset } from 'expo-asset';
+import * as DocumentPicker from 'expo-document-picker';
 import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -108,51 +108,16 @@ export default function AddProjectModal({
   }, [files, projectId]);
 
 
-   const pickDocument = async () => {
-    // try {
-    //   const result = await DocumentPicker.getDocumentAsync({ multiple: false });
-    //   if (result.canceled || !result.assets?.length) return;
-    //   const file = result.assets[0];
-    //   setFiles(prev => [...prev, file]);
-
-    //   const formData = new FormData();
-    //   formData.append('file', {
-    //     uri: file.uri,
-    //     name: file.name,
-    //     type: file.mimeType || 'application/pdf',
-    //   } as any);
-
-    //   const res = await fetch(`${API_URL}/assistant/project_draft`, {
-    //     method: 'POST',
-    //     headers: {
-    //       Authorization: `Bearer ${session?.token}`,
-    //     },
-    //     body: formData,
-    //   });
-
-    //   const data = await res.json();
-    //   const draft = JSON.stringify(data.projects?.[0], null, 2);
-    //   setChatMessages(prev => [
-    //     ...prev,
-    //     { text: `📎 Uploaded file: ${file.name}`, from: 'user', timestamp: new Date().toISOString() },
-    //     { text: '```json\n' + draft + '\n```', from: 'bot', timestamp: new Date().toISOString() },
-    //   ]);
-    // } catch (error) {
-    //   console.error('Document picker error:', error);
-    //   Alert.alert('Failed to upload and parse document');
-    // }
+  const pickDocument = async () => {
     try {
-      const asset = Asset.fromModule(require('../assets/temp.pdf'));
-      await asset.downloadAsync();
-
-      const file = {
-        uri: asset.localUri || asset.uri,
-        name: 'temp.pdf',
-        type: 'application/pdf',
-      };
-
+      const result = await DocumentPicker.getDocumentAsync({ multiple: false });
+      // console.log(result);
+      if (result.canceled || !result.assets?.length) return;
+      
+      const file = result.assets[0];
       setFiles(prev => [...prev, file]);
 
+      // 可選：顯示上傳成功訊息（非必要）
       setChatMessages(prev => [
         ...prev,
         {
@@ -161,12 +126,13 @@ export default function AddProjectModal({
           timestamp: new Date().toISOString(),
         }
       ]);
-      
+
     } catch (error) {
-      console.error('Asset loading error:', error);
-      Alert.alert('Failed to load asset file');
+      console.error('Document picker error:', error);
+      Alert.alert('Failed to pick document');
     }
   };
+
 
   const sendMessage = async () => {
     if (!input.trim()) return;
@@ -313,9 +279,17 @@ export default function AddProjectModal({
       return;
     }
 
+    // 先顯示 loading 視圖
+    setChatMessages([{
+      text: '⏳ 請稍候，AI 正在閱讀您的文件...',
+      from: 'bot',
+      timestamp: new Date().toISOString()
+    }]);
+    setStepReady(true); // 立即進入第二畫面
+
     try {
       const formData = new FormData();
-      const file = files[0]; // 只取一個檔案
+      const file = files[0];
       formData.append('file', {
         uri: file.uri,
         name: file.name,
@@ -331,22 +305,26 @@ export default function AddProjectModal({
       });
 
       const data = await res.json();
-      const draft = JSON.stringify(data.projects?.[0], null, 2);
+      const draft = data.response;
 
-      setChatMessages(prev => [
-        ...prev,
-        {
-          text: '```json\n' + draft + '\n```',
-          from: 'bot',
-          timestamp: new Date().toISOString()
-        }
-      ]);
-      setStepReady(true);
+      console.log(draft);
+      // 更新 loading 氣泡為正式回覆
+      setChatMessages([{
+        text: draft,
+        from: 'bot',
+        timestamp: new Date().toISOString()
+      }]);
     } catch (e) {
       console.error(e);
       Alert.alert('Failed to fetch draft');
+      setChatMessages([{
+        text: '❌ 無法取得 Gemini 回覆，請稍後再試。',
+        from: 'bot',
+        timestamp: new Date().toISOString()
+      }]);
     }
   };
+
 
 
   const resetAll = async () => {
@@ -478,6 +456,23 @@ export default function AddProjectModal({
                 <Text className="text-center text-md text-[#5E1526] font-semibold mb-4">(.docx or .pdf)</Text>
               </TouchableOpacity>
 
+              {files.length > 0 && (
+                <View className="mt-4">
+                  <Text className="text-[#5E1526] font-bold mb-2">Uploaded Files:</Text>
+                  {files.map((file, index) => (
+                    <View key={index} className="flex-row items-center justify-between bg-gray-100 p-3 rounded-lg mb-2">
+                      <Text className="text-gray-800 flex-1" numberOfLines={1}>
+                        📄 {file.name}
+                      </Text>
+                      <Text className="text-xs text-gray-500 ml-2">
+                        {file.type || 'unknown'}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+
               <TouchableOpacity
                 className={`mt-6 rounded-full py-3 px-6 w-fit mx-auto ${title.trim() && deadline ? 'bg-[#5E1526]' : 'bg-gray-400'}`}
                 disabled={!title.trim() || !deadline}
@@ -494,7 +489,7 @@ export default function AddProjectModal({
                   data={chatMessages}
                   keyExtractor={(_, index) => index.toString()}
                   renderItem={({ item }) => (
-                    <View className={`rounded-xl px-4 py-2 mb-2 max-w-[75%] ${item.from === 'user' ? 'bg-[#F29389] self-end' : 'bg-gray-100 self-start'}`}>
+                    <View className={`rounded-xl px-4 py-2 mb-2 max-w-[80%] ${item.from === 'user' ? 'bg-[#F29389] self-end' : 'bg-gray-100 self-start'}`}>
                       <Markdown>{item.text}</Markdown>
                     </View>
                   )}
