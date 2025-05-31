@@ -19,9 +19,6 @@ const colorOptions = [
   "bg-[#F8C8C3]", // light pink
   "bg-[#F29389]", // salmon
   "bg-[#FF9AA2]", // pastel red
-  "bg-[#FF6F61]", // coral
-  "bg-[#FFB6B9]", // blush pink
-  "bg-[#F67280]", // flamingo
 ];
 
 const COLUMN_WIDTH = 80;
@@ -49,12 +46,12 @@ const ProjectRow: React.FC<{
         ))}
         {/* Lighter gray horizontal line across the entire row */}
         <View
-          className="absolute bg-gray-100 h-px"
+          className="absolute bg-gray-500 h-[0.5]"
           style={{
             top: 24, // Middle of the 48px (h-12) row
             left: 0,
             right: 0,
-            width: '100%'
+            width: '100%',
           }}
         />
       </View>
@@ -88,7 +85,7 @@ const ProjectRow: React.FC<{
     <View className="flex-row h-12 relative">
       {/* Lighter gray horizontal line across entire row (behind everything) */}
       <View
-        className="absolute bg-gray-100 h-px z-0"
+        className="absolute bg-gray-500 h-[0.5] z-0"
         style={{
           top: 24, // Middle of the 48px (h-12) row
           left: 0,
@@ -112,8 +109,8 @@ const ProjectRow: React.FC<{
             {isInRange && (
               <View
                 className={`h-full ${project.colorClass} ${
-                  isFirst ? 'rounded-l-md' : ''
-                } ${isLast ? 'rounded-r-md' : ''}`}
+                  isFirst ? 'rounded-l-full' : ''
+                } ${isLast ? 'rounded-r-full' : ''}`}
               />
             )}
           </View>
@@ -137,13 +134,13 @@ const ProjectRow: React.FC<{
           className="justify-center items-center px-1"
         >
           <Text
-            className="text-xs font-medium text-center truncate"
+            className="text-sm font-semibold text-[#5E1526] text-center truncate"
             numberOfLines={1}
           >
             {project.title}
           </Text>
           <Text
-            className="text-xs text-gray-500 text-center mt-1 truncate"
+            className="text-xs text-[#5E1526] text-center truncate"
             numberOfLines={1}
           >
             {project.dateRange}
@@ -435,14 +432,14 @@ const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>
           showsHorizontalScrollIndicator={true}
           onScroll={handleScroll}
           scrollEventThrottle={16} // Smooth scrolling
-          className="flex-1 bg-white rounded-2xl px-4 py-2 shadow-sm"
+          className="flex-1 bg-white rounded-2xl shadow-sm"
           decelerationRate="normal" // Smooth deceleration
           bounces={true}
           removeClippedSubviews={true} // Performance optimization
         >
           <View style={{ minWidth: COLUMN_WIDTH * dates.length }}>
             {/* Table Header - Date Columns with Today Line */}
-            <View className="flex-row mb-2 bg-transparent">
+            <View className="flex-row mb-2 bg-transparent border-b border-gray-300">
               {dates.map((date, index) => {
                 const isToday = date.toDateString() === new Date().toDateString();
                 return (
@@ -451,7 +448,7 @@ const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>
                     className="items-center py-2 relative"
                     style={{ width: COLUMN_WIDTH }}
                   >
-                    <Text className="text-sm text-[#5E1526]">
+                    <Text className="text-xs text-gray-500">
                       {date.toLocaleString('en-US', { weekday: 'short' })}
                     </Text>
                     <Text className="text-sm text-[#5E1526]">
