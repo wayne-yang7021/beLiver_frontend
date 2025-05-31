@@ -109,8 +109,8 @@ const ProjectRow: React.FC<{
             {isInRange && (
               <View
                 className={`h-full ${project.colorClass} ${
-                  isFirst ? 'rounded-l-md' : ''
-                } ${isLast ? 'rounded-r-md' : ''}`}
+                  isFirst ? 'rounded-l-full' : ''
+                } ${isLast ? 'rounded-r-full' : ''}`}
               />
             )}
           </View>
@@ -134,13 +134,13 @@ const ProjectRow: React.FC<{
           className="justify-center items-center px-1"
         >
           <Text
-            className="text-xs font-medium text-white text-center truncate"
+            className="text-sm font-semibold text-[#5E1526] text-center truncate"
             numberOfLines={1}
           >
             {project.title}
           </Text>
           <Text
-            className="text-xs text-white text-center mt-1 truncate"
+            className="text-xs text-[#5E1526] text-center truncate"
             numberOfLines={1}
           >
             {project.dateRange}
@@ -431,7 +431,7 @@ const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>
           showsHorizontalScrollIndicator={true}
           onScroll={handleScroll}
           scrollEventThrottle={16} // Smooth scrolling
-          className="flex-1 bg-white rounded-2xl px-4 py-2 shadow-sm"
+          className="flex-1 bg-white rounded-2xl shadow-sm"
           decelerationRate="normal" // Smooth deceleration
           bounces={true}
           removeClippedSubviews={true} // Performance optimization
