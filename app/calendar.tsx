@@ -16,9 +16,12 @@ interface Project {
 
 // Define some pink/red shades
 const colorOptions = [
-  // "bg-[#F8C8C3]", // light pink
+  "bg-[#F8C8C3]", // light pink
   "bg-[#F29389]", // salmon
-  "bg-[#5E1526]", // pastel red
+  "bg-[#FF9AA2]", // pastel red
+  "bg-[#FF6F61]", // coral
+  "bg-[#FFB6B9]", // blush pink
+  "bg-[#F67280]", // flamingo
 ];
 
 const COLUMN_WIDTH = 80;
@@ -32,11 +35,11 @@ const ProjectRow: React.FC<{
   viewWidth?: number; // Add view width to calculate visible range
 }> = ({ project, dates, columnWidth, scrollX = 0, viewWidth = 300 }) => {
   const router = useRouter();
-  
+
   if (!project) {
-    // Empty row
+    // Empty row with lighter gray horizontal line in the middle
     return (
-      <View className="flex-row h-12">
+      <View className="flex-row h-12 relative">
         {dates.map((_, index) => (
           <View
             key={index}
@@ -44,6 +47,16 @@ const ProjectRow: React.FC<{
             className="h-full"
           />
         ))}
+        {/* Lighter gray horizontal line across the entire row */}
+        <View
+          className="absolute bg-gray-100 h-px"
+          style={{
+            top: 24, // Middle of the 48px (h-12) row
+            left: 0,
+            right: 0,
+            width: '100%'
+          }}
+        />
       </View>
     );
   }
@@ -59,20 +72,31 @@ const ProjectRow: React.FC<{
   // Calculate visible range based on scroll position
   const visibleStartIndex = Math.floor(scrollX / columnWidth);
   const visibleEndIndex = Math.ceil((scrollX + viewWidth) / columnWidth);
-  
+
   // Find the intersection of project range and visible range
   const visibleProjectStartIndex = Math.max(startIndex, visibleStartIndex);
   const visibleProjectEndIndex = Math.min(lastIndex, visibleEndIndex);
-  
+
   // Calculate the middle index of the visible project portion
   const visibleMiddleIndex = Math.floor((visibleProjectStartIndex + visibleProjectEndIndex) / 2);
-  
+
   // Only show title if there's a visible portion of the project
   const shouldShowTitle = visibleProjectStartIndex <= visibleProjectEndIndex;
   const titleIndex = shouldShowTitle ? visibleMiddleIndex : -1;
 
   return (
     <View className="flex-row h-12 relative">
+      {/* Lighter gray horizontal line across entire row (behind everything) */}
+      <View
+        className="absolute bg-gray-100 h-px z-0"
+        style={{
+          top: 24, // Middle of the 48px (h-12) row
+          left: 0,
+          right: 0,
+          width: '100%'
+        }}
+      />
+
       {/* Project background blocks */}
       {dates.map((date, index) => {
         const isInRange = date >= project.startDate && date <= project.endDate;
@@ -83,7 +107,7 @@ const ProjectRow: React.FC<{
           <View
             key={index}
             style={{ width: columnWidth }}
-            className="h-full"
+            className="h-full relative z-10"
           >
             {isInRange && (
               <View
@@ -108,17 +132,18 @@ const ProjectRow: React.FC<{
             left: visibleProjectStartIndex * columnWidth,
             width: (visibleProjectEndIndex - visibleProjectStartIndex + 1) * columnWidth,
             height: '100%',
+            zIndex: 20,
           }}
           className="justify-center items-center px-1"
         >
           <Text
-            className="text-xs font-medium text-center truncate text-white"
+            className="text-xs font-medium text-center truncate"
             numberOfLines={1}
           >
             {project.title}
           </Text>
           <Text
-            className="text-xs text-white text-center mt-1 truncate"
+            className="text-xs text-gray-500 text-center mt-1 truncate"
             numberOfLines={1}
           >
             {project.dateRange}
@@ -359,7 +384,7 @@ const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>
     dates.some(date => date >= project.startDate && date <= project.endDate)
   );
 
-  const rowCount = Math.max(8, visibleProjects.length);
+  const rowCount = Math.max(visibleProjects.length + 5, 8); // Always show at least 5 empty rows with lines
 
   return (
     <SafeAreaView className="flex-1 bg-[#F8C8C3]">
