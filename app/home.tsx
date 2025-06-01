@@ -57,7 +57,6 @@ export default function HomeScreen() {
 
   useEffect(() => {
     const fetchTasks = async () => {
-      // console.log(`${API_URL}/tasks?date=${selectedDateFormatted}`);
       setIsLoading(true);
       try {
         const response = await fetch(`${API_URL}/tasks?date=${selectedDateFormatted}`, {
@@ -204,7 +203,9 @@ export default function HomeScreen() {
       <View className="px-6 mt-6 flex-row gap-12 justify-between items-center m-2">
         <View>
           <Text className="text-3xl font-semibold text-[#5E1526]">Good morning,</Text>
-          <Text className="text-3xl font-semibold text-[#5E1526]">{session?.name} !</Text>
+          <Text className="text-3xl font-semibold text-[#5E1526]">
+            {`${session?.name ?? ''} !`}
+          </Text>
         </View>
         <Image source={require('../assets/images/liver.png')} className="w-32 h-28" style={{ resizeMode: 'contain' }} />
       </View>
@@ -252,7 +253,11 @@ export default function HomeScreen() {
       <View className="bg-white rounded-3xl shadow-lg mx-4 mt-6 pb-4 flex-1">
         <View className="flex-row justify-between items-center pr-6 pl-6 mt-4">
           <Text className="text-lg font-semibold text-red-900">
-            {selectedDateIndex === 30 ? 'Today\'s Tasks' : `Tasks for ${selectedDate.toLocaleDateString()}`}
+            <Text className="text-lg font-semibold text-red-900">
+              {selectedDateIndex === 30
+                ? "Today's Tasks"
+                : `Tasks for ${selectedDate.toLocaleDateString()}`}
+            </Text>
           </Text>
           <TouchableOpacity onPress={() => setIsEditMode(!isEditMode)}>
             <Text className={`font-medium ${isEditMode ? 'text-red-500' : 'text-[#F8C8C3]'}`}>{isEditMode ? 'Done' : 'Edit'}</Text>

@@ -6,7 +6,7 @@ import '../global.css';
 
 export default function IndexRedirect() {
   const router = useRouter();
-  const { session, isLoaded } = useSession();
+  const { session, isLoaded} = useSession();
 
   useEffect(() => {
     if (!isLoaded) return;
