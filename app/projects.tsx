@@ -104,7 +104,7 @@ useFocusEffect(
             top: '50%',
             left: `${progress * 100}%`,
             transform: [
-              { translateX: progress < 0.1 ? 0 : progress > 0.9 ? -screenWidth * 0.02 : -12 }, // 自動調整氣泡偏移
+              { translateX: progress < 0.1 ? 0 : progress > 0.9 ? -screenWidth * 0.02 : -18 }, // 自動調整氣泡偏移
               { translateY: -12 },
             ],
             zIndex: 2,
@@ -255,7 +255,14 @@ useFocusEffect(
       </TouchableOpacity>
       
 
-      <AddProjectModal projectId={modalProjectId} visible={modalVisible} onClose={() => setModalVisible(false)} />
+      <AddProjectModal
+        projectId={modalProjectId}
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onProjectAdded={() => {
+          fetchProjects(); // ✅ 重新抓最新資料
+        }}
+      />
     </View>
   );
 }

@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "beLiver_frontend",
-    "slug": "beLiver_frontend",
+    "slug": "beliver",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -9,7 +9,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "beliver",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "expo": {
       "ios": {
@@ -20,13 +24,13 @@
         }
       }
     },
-
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.wayne_yang.beliver"
     },
     "web": {
       "bundler": "metro",
@@ -47,6 +51,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "cd504224-2abf-4dde-8017-c6092a0f2f4f"
+      }
+    },
+    "owner": "wayne_yang"
   }
 }

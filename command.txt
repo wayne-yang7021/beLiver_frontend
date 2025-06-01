@@ -1,0 +1,2 @@
+npx eas-cli@latest init --id cd504224-2abf-4dde-8017-c6092a0f2f4f
+npx eas-cli@latest build --platform all --auto-submit

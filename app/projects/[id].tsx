@@ -54,6 +54,7 @@ export default function ProjectManagementScreen() {
       if (!id) return;
 
       const fetchProject = async () => {
+        console.log("Get into project: ", id);
         try {
           const res = await fetch(`${API_URL}/project_detail?project_id=${id}`, {
             headers: {
@@ -234,7 +235,7 @@ export default function ProjectManagementScreen() {
             </View>}
             <View className="flex-row items-center">
               <Text className="text-sm text-gray-500 mr-2">Deadline:</Text> 
-            {showDeadlinePicker ? (
+              {showDeadlinePicker ? (
                 <View style={{ 
                   alignItems: 'center',
                   transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] // Scale down to 80%

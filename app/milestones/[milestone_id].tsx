@@ -462,11 +462,13 @@ export default function MilestoneDetailScreen() {
             <Text className="text-4xl font-bold">
               {tasks.filter(t => t.isCompleted).reduce((sum, t) => sum + (t.estimated_loading || 0), 0)}
             </Text>
-            <Text className="text-sm text-gray-600">/ {milestone?.milestone_estimated_loading ?? 0} Hours</Text>
+            <Text className="text-sm text-gray-600">
+              <Text>/ {milestone?.milestone_estimated_loading ?? 0} Hours</Text>
+            </Text>
           </View>
         </View>
 
-        <Text className="text-2xl font-bold text-center mb-4">{milestone?.milestone_name}</Text>
+        <Text className="text-2xl font-bold text-center mb-4">{milestone?.milestone_name || ''}</Text>
 
         <View className="bg-gray-100 p-4 rounded-xl mb-6">
           <View className="flex-col justify-between mb-2 items-start gap-2">
@@ -526,9 +528,7 @@ export default function MilestoneDetailScreen() {
                     <View className="ml-3 flex-1">
                       <Text className="font-medium">{task.task_name}</Text>
                       <Text className="text-sm text-gray-500">{task.task_ddl_day}</Text>
-                      {task.estimated_loading && (
-                        <Text className="text-xs text-blue-600">{task.estimated_loading} hours</Text>
-                      )}
+                      <Text className="text-xs text-blue-600">{task.estimated_loading ?? 0} hours</Text>
                     </View>
                     <TouchableOpacity onPress={() => toggleTaskExpansion(task.task_id)} className="p-2">
                       <Ionicons 
@@ -543,9 +543,7 @@ export default function MilestoneDetailScreen() {
                     <View className="flex-1">
                       <Text className="font-medium">{task.task_name}</Text>
                       <Text className="text-sm text-gray-500">{task.task_ddl_day}</Text>
-                      {task.estimated_loading && (
-                        <Text className="text-xs text-blue-600">{task.estimated_loading} hours</Text>
-                      )}
+                      <Text className="text-xs text-blue-600">{task.estimated_loading ?? 0} hours</Text>
                     </View>
                     <View className="flex-row items-center gap-2">
                       <TouchableOpacity onPress={() => toggleTaskExpansion(task.task_id)} className="p-2">
@@ -569,12 +567,12 @@ export default function MilestoneDetailScreen() {
               {/* Expandable content */}
               {expandedTasks.has(task.task_id) && (
                 <View className="mt-3 pt-3 border-t border-gray-200">
-                  {task.estimated_loading && (
-                    <View className="mb-2">
-                      <Text className="text-xs text-gray-500 mb-1">Estimated Loading</Text>
-                      <Text className="text-sm font-medium text-blue-600">{task.estimated_loading} hours</Text>
-                    </View>
-                  )}
+                  
+                  <View className="mb-2">
+                    <Text className="text-xs text-gray-500 mb-1">Estimated Loading</Text>
+                    <Text className="text-sm font-medium text-blue-600">{task.estimated_loading} hours</Text>
+                  </View>
+               
                   {task.description && (
                     <View>
                       <Text className="text-xs text-gray-500 mb-1">Description</Text>
@@ -599,10 +597,8 @@ export default function MilestoneDetailScreen() {
           )}
         </View>
       </ScrollView>
-
-      {/* Loading Animation */}
-      <LoadingAnimation visible={isTaskLoading} />
-
+ 
+      
       {/* Task Edit/Add Modal */}
       <Modal
         visible={showTaskModal}
@@ -645,31 +641,32 @@ export default function MilestoneDetailScreen() {
                 />
               </View>
 
-              {!isAddingTask && 
-              <View className="mb-4">
-                <Text className="text-sm text-gray-600 mb-2">Estimated Loading (Hours)</Text>
-                <TextInput
-                  value={modalTaskEstimatedLoading}
-                  onChangeText={setModalTaskEstimatedLoading}
-                  placeholder="e.g., 2.5"
-                  keyboardType="numeric"
-                  className="bg-gray-100 p-3 rounded-lg"
-                />
-              </View>}
-
-                <View className="mb-6">
-                  <Text className="text-sm text-gray-600 mb-2">Due Date</Text>
-                  <View className="bg-gray-100 p-3 rounded-lg">
-                    <DateTimePicker
-                      value={modalTaskDeadline || new Date()}
-                      mode="date"
-                      display={Platform.OS === 'ios' ? 'compact' : 'default'}
-                      onChange={(event, date) => setModalTaskDeadline(date || new Date())}
-                      // minimumDate={new Date(new Date().setHours(0, 0, 0, 0))}
-                      // maximumDate={deadline}
-                    />
-                  </View>
+              {!isAddingTask && (
+                <View className="mb-4">
+                  <Text className="text-sm text-gray-600 mb-2">Estimated Loading (Hours)</Text>
+                  <TextInput
+                    value={modalTaskEstimatedLoading}
+                    onChangeText={setModalTaskEstimatedLoading}
+                    placeholder="e.g., 2.5"
+                    keyboardType="numeric"
+                    className="bg-gray-100 p-3 rounded-lg"
+                  />
                 </View>
+              )}
+
+              <View className="mb-6">
+                <Text className="text-sm text-gray-600 mb-2">Due Date</Text>
+                <View className="bg-gray-100 p-3 rounded-lg">
+                  <DateTimePicker
+                    value={modalTaskDeadline || new Date()}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'compact' : 'default'}
+                    onChange={(event, date) => setModalTaskDeadline(date || new Date())}
+                    // minimumDate={new Date(new Date().setHours(0, 0, 0, 0))}
+                    // maximumDate={deadline}
+                  />
+                </View>
+              </View>
             </ScrollView>
 
             <View className="flex-row gap-3">
@@ -692,6 +689,13 @@ export default function MilestoneDetailScreen() {
           </View>
         </View>
       </Modal>
+
+    {isTaskLoading && (
+        <View className="absolute inset-0 z-50 justify-center items-center bg-black bg-opacity-40">
+          <LoadingAnimation visible={true} />
+        </View>
+      )}
     </SafeAreaView>
+    
   );
 }

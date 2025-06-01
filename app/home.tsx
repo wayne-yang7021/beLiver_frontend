@@ -24,6 +24,7 @@ interface Task {
   task_id: string;
   task_title: string;
   description?: string;
+  project_name?: string;
   estimated_loading?: number;
   isCompleted: boolean;
   project_id?: string;
@@ -44,7 +45,7 @@ export default function HomeScreen() {
   const [editEtc, setEditEtc] = useState(0);
   const [editDetails, setEditDetails] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const scrollX = useRef(0);
 
@@ -54,6 +55,7 @@ export default function HomeScreen() {
   const selectedDateFormatted = format(selectedDate, 'yyyy-MM-dd');
 
   useEffect(() => {
+    setIsLoading(true);
     const fetchTasks = async () => {
       try {
         const response = await fetch(`${API_URL}/tasks?date=${selectedDateFormatted}`, {
@@ -281,6 +283,7 @@ export default function HomeScreen() {
                     </View>
                   ) : null}
                 </View>
+                <View><Text className='text-gray-600 font-semibold '>{task.project_name}</Text></View>
                 {task.description ? (
                   <View className="mt-3 mb-3">
                     <Text className="text-red-700 text-justify leading-5">{task.description}</Text>

@@ -26,10 +26,12 @@ export default function AddProjectModal({
   visible,
   onClose,
   projectId,
+  onProjectAdded,
 }: {
   visible: boolean;
   onClose: () => void;
   projectId: string;
+  onProjectAdded?: () => void;
 }) {
   const [title, setTitle] = useState('');
   const [deadline, setDeadline] = useState<Date | null>(null);
@@ -40,6 +42,9 @@ export default function AddProjectModal({
     { text: string; from: 'user' | 'bot'; timestamp: string }[]
   >([]);
   const [typingPrefix, setTypingPrefix] = useState('');
+  const [typingIndex, setTypingIndex] = useState<number | null>(null);
+
+  const [chatId, setChatId] = useState(0);
   const [input, setInput] = useState('');
   const flatListRef = useRef<FlatList>(null);
   const { session } = useSession();
@@ -47,7 +52,6 @@ export default function AddProjectModal({
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
 
-  
 
 
   const storage = {
@@ -78,7 +82,6 @@ export default function AddProjectModal({
 
 
 
-
   // Load saved draft from localStorage
   useEffect(() => {
     if (!visible) return;
@@ -102,6 +105,7 @@ export default function AddProjectModal({
     loadJson();
     loadStorage();
   }, [visible, projectId]);
+
 
 
  useEffect(() => {
@@ -144,6 +148,7 @@ export default function AddProjectModal({
 
 
   const sendMessage = async () => {
+    setChatId(chatId+1);
     if (!input.trim()) return;
 
     const userMsg = {
@@ -159,7 +164,10 @@ export default function AddProjectModal({
     };
 
 
+   const newIndex = chatMessages.length + 1;
+
     setChatMessages(prev => [...prev, userMsg, botMsg]);
+    setTypingIndex(newIndex);
     setInput('');
     setIsTyping(true); 
 
@@ -226,6 +234,7 @@ export default function AddProjectModal({
       ]);
     } finally {
       setIsTyping(false); // Stop typing indicator
+      setTypingIndex(null);
     }
   };
 
@@ -333,6 +342,7 @@ export default function AddProjectModal({
 
       resetAll();
       onClose();
+      if (onProjectAdded) onProjectAdded(); 
     } catch (e) {
       console.error(e);
       Alert.alert('Failed to create project');
@@ -369,6 +379,11 @@ export default function AddProjectModal({
       setChatMessages(savedChat);
       if (savedJson) setProjectJson(savedJson);
       setStepReady(true);
+
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 300); // 記得等一下讓畫面能渲染完
+
       return;
     }
     // setTypingPrefix('AI 正在閱讀您的文件');
@@ -386,7 +401,11 @@ export default function AddProjectModal({
     };
 
 
+    const userIndex = chatMessages.length;
+    const botIndex = userIndex + 1;
+
     setChatMessages(prev => [...prev, uploadMsg, botMsg]);
+    setTypingIndex(botIndex); // ✅ 告訴 FlatList 這個 index 要顯示 Typing 動畫
     setStepReady(true);
     setIsTyping(true);
 
@@ -412,18 +431,37 @@ export default function AddProjectModal({
 
       const data = await res.json();
       const draft = data.response || JSON.stringify(data.projects?.[0], null, 2);
-
+      
+      console.log("gemini reponse: \n",
+        draft
+      )
       // ✅ 儲存 JSON 結構
       if (data.projects) {
         await storage.set(`json-${projectId}`, data.projects);
         setProjectJson(data.projects);
       }
 
-      setChatMessages(prev => [...prev, {
-        text: draft,
-        from: 'bot' as const,
-        timestamp: new Date().toISOString()
-      }]);
+      setChatMessages(prev => {
+        const newPrev = [...prev];
+        const lastIndex = newPrev.length - 1;
+
+        if (newPrev[lastIndex].from === 'bot' && newPrev[lastIndex].text === '') {
+          newPrev[lastIndex].text = draft;
+        } else {
+          // 如果沒加 botMsg，補上
+          newPrev.push({
+            text: draft,
+            from: 'bot',
+            timestamp: new Date().toISOString()
+          });
+        }
+
+        return newPrev;
+      });
+
+      setTypingIndex(null); // ✅ 清除 typing 狀態
+
+
 
     } catch (e) {
       console.error(e);
@@ -574,13 +612,12 @@ export default function AddProjectModal({
                   ref={flatListRef}
                   data={chatMessages}
                   keyExtractor={(_, index) => index.toString()}
-                  renderItem={({ item }) => {
-                      const isTypingBubble = item.from === 'bot' && item.text === '';
-
+                  renderItem={({ item, index} ) => {
+                      // const isTypingBubble = item.from === 'bot' && item.text === '';
                       return (
-                        <View className={`rounded-xl px-4 py-2 mb-2 max-w-[80%] min-h-[40px] min-w-[60px] justify-center ${item.from === 'user' ? 'bg-[#F29389] self-end' : 'bg-gray-100 self-start'}`}>
-                          {isTyping && item.from === 'bot' ? (
-                            <View className="flex-row items-center pb-2 pl-1">
+                        <View className={`rounded-xl px-4 py-2 mb-2 max-w-[84%] min-h-[40px] min-w-[60px] justify-center ${item.from === 'user' ? 'bg-[#F29389] self-end' : 'bg-gray-100 self-start'}`}>
+                          {typingIndex === index && item.from === 'bot' ? (
+                            <View key={chatId} className="flex-row items-center pb-2 pl-1">
                               <Text className="text-gray-700">{typingPrefix}</Text>
                               <TypingAnimation
                                 dotColor="#999"
