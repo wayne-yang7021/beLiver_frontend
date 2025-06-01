@@ -44,6 +44,7 @@ export default function HomeScreen() {
   const [editEtc, setEditEtc] = useState(0);
   const [editDetails, setEditDetails] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const scrollViewRef = useRef<ScrollView>(null);
   const scrollX = useRef(0);
 
