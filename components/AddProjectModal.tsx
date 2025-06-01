@@ -279,50 +279,63 @@ export default function AddProjectModal({
       return;
     }
 
-    // 先顯示 loading 視圖
-    setChatMessages([{
-      text: '⏳ 請稍候，AI 正在閱讀您的文件...',
-      from: 'bot',
-      timestamp: new Date().toISOString()
-    }]);
-    setStepReady(true); // 立即進入第二畫面
-
+    setStepReady(true);
+    
     try {
-      const formData = new FormData();
-      const file = files[0];
-      formData.append('file', {
-        uri: file.uri,
-        name: file.name,
-        type: file.mimeType || 'application/pdf',
-      } as any);
+        const savedDraft = await storage.get(`draft-${projectId}`);
+        if (savedDraft) {
+          setChatMessages([{
+            text: savedDraft,
+            from: 'bot',
+            timestamp: new Date().toISOString(),
+          }]);
+          return;
+        }
 
-      const res = await fetch(`${API_URL}/assistant/project_draft`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session?.token}`,
-        },
-        body: formData,
-      });
+        // 顯示 loading 訊息
+        setChatMessages([{
+          text: '⏳ 請稍候，AI 正在閱讀您的文件...',
+          from: 'bot',
+          timestamp: new Date().toISOString()
+        }]);
 
-      const data = await res.json();
-      const draft = data.response;
+        const formData = new FormData();
+        const file = files[0];
+        formData.append('file', {
+          uri: file.uri,
+          name: file.name,
+          type: file.mimeType || 'application/pdf',
+        } as any);
 
-      console.log(draft);
-      // 更新 loading 氣泡為正式回覆
-      setChatMessages([{
-        text: draft,
-        from: 'bot',
-        timestamp: new Date().toISOString()
-      }]);
-    } catch (e) {
-      console.error(e);
-      Alert.alert('Failed to fetch draft');
-      setChatMessages([{
-        text: '❌ 無法取得 Gemini 回覆，請稍後再試。',
-        from: 'bot',
-        timestamp: new Date().toISOString()
-      }]);
-    }
+        const res = await fetch(`${API_URL}/assistant/project_draft`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session?.token}`,
+          },
+          body: formData,
+        });
+
+        if (!res.ok) throw new Error('Gemini analysis failed');
+        const data = await res.json();
+        const draft = data.response || JSON.stringify(data.projects?.[0], null, 2);
+
+        // 儲存草稿到 AsyncStorage
+        await storage.set(`draft-${projectId}`, draft);
+
+        setChatMessages([{
+          text: draft,
+          from: 'bot',
+          timestamp: new Date().toISOString()
+        }]);
+      } catch (e) {
+        console.error(e);
+        Alert.alert('Failed to fetch draft');
+        setChatMessages([{
+          text: '❌ 無法取得 Gemini 回覆，請稍後再試。',
+          from: 'bot',
+          timestamp: new Date().toISOString()
+        }]);
+      }
   };
 
 
@@ -335,40 +348,6 @@ export default function AddProjectModal({
     setChatMessages([]);
     setFiles([]);
   };
-
-  const JsonDisplay = ({ data }: { data: any }) => {
-    return (
-      <View className="gap-2">
-        {data.projects?.map((project: any, i: number) => (
-          <View key={i} className="bg-white p-2 rounded-lg border border-gray-300">
-            <Text className="font-bold text-lg">{project.name}</Text>
-            <Text className="text-sm text-gray-700 mb-1">{project.summary}</Text>
-            <Text className="text-xs text-gray-500">🗓 {project.start_time} → {project.due_date}</Text>
-            <Text className="text-xs text-gray-500 mb-2">⏳ {project.estimated_loading} hrs</Text>
-
-            {project.milestones?.map((m: any, j: number) => (
-              <View key={j} className="mt-2 pl-2 border-l-2 border-pink-300">
-                <Text className="font-semibold">{m.name}</Text>
-                <Text className="text-sm text-gray-600">{m.summary}</Text>
-                <Text className="text-xs text-gray-500">📅 {m.start_time} → {m.end_time}</Text>
-                <Text className="text-xs text-gray-500 mb-1">⏱ {m.estimated_loading} hrs</Text>
-
-                {m.tasks?.map((t: any, k: number) => (
-                  <View key={k} className="ml-2 mt-1 p-2 bg-gray-100 rounded">
-                    <Text className="font-semibold">{t.title}</Text>
-                    <Text className="text-sm">{t.description}</Text>
-                    <Text className="text-xs text-gray-500">📆 Due: {t.due_date}</Text>
-                    <Text className="text-xs text-gray-500">⏱ {t.estimated_loading} hrs</Text>
-                  </View>
-                ))}
-              </View>
-            ))}
-          </View>
-        ))}
-      </View>
-    );
-  };
-
 
 
   return (
