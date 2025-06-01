@@ -527,7 +527,7 @@ const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>
             {/* Gantt Chart Body - Project Rows */}
             <View className='rounded-2xl px-4 py-4 shadow-sm'>
                 {Array.from({ length: rowCount }).map((_, rowIndex) => (
-                <View key={rowIndex} className="py-1">
+                <View key={rowIndex} className="py-2">
                   <ProjectRow
                   project={visibleProjects[rowIndex]}
                   dates={dates}

@@ -40,7 +40,7 @@ export default function Projects() {
       if (!response.ok) throw new Error('Failed to fetch projects');
       const data = await response.json();
       setNumOfProject(data.length)
-      console.log('Fetched projects:', data);
+      // console.log('Fetched projects:', data);
       setProjects(data);
     } catch (err) {
       console.error(err);

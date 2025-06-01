@@ -205,8 +205,6 @@ export default function AddProjectModal({
   };
 
 
-
-
   const handleAddProject = async () => {
     if (!title.trim()) {
       Alert.alert('Project name is required.');

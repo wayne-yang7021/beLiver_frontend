@@ -65,6 +65,7 @@ export default function ProjectManagementScreen() {
             throw new Error('Failed to fetch project');
           }
           const data = await res.json();
+          console.log(data);
           setProject(data);
         } catch {
           setProject(null);
