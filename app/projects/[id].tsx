@@ -14,6 +14,7 @@ type Milestone = {
   milestone_name: string;
   ddl: string;
   progress: number;
+  estimated_loading: number;
 };
 
 type Project = {
@@ -144,15 +145,33 @@ export default function ProjectManagementScreen() {
                   'Delete Project',
                   'Are you sure you want to delete this project?',
                   [
-                    { text: 'Cancel', style: 'cancel' },
-                    {
-                      text: 'Delete',
-                      style: 'destructive',
-                      onPress: () => {
-                        setProject(null);
-                        router.back();
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                    try {
+                      const res = await fetch(`${API_URL}/project?project_id=${id}`, {
+                      method: 'DELETE',
+                      headers: {
+                        Authorization: `Bearer ${session?.token}`,
                       },
+                      });
+                      
+                      if (!res.ok) {
+                      const errorText = await res.text();
+                      console.error('Failed to delete project:', errorText);
+                      Alert.alert('Error', 'Failed to delete project.');
+                      return;
+                      }
+                      setProject(null);
+                      router.back();
+                    } catch (error) {
+                      console.error('Error deleting project:', error);
+                      Alert.alert('Error', 'Failed to delete project.');
+                    }
                     },
+                  },
                   ]
                 );
               }}
@@ -174,7 +193,7 @@ export default function ProjectManagementScreen() {
             progress={
               project.estimated_loading > 0
                 ? project.milestones
-                    .reduce((sum, m) => sum + (m.progress * project.estimated_loading), 0) / project.estimated_loading
+                    .reduce((sum, m) => sum + (m.progress * m.estimated_loading), 0) / project.estimated_loading
                 : 0
             }
             color="#f8c8c3"
@@ -188,7 +207,7 @@ export default function ProjectManagementScreen() {
             <Text className="text-4xl font-bold">
               {Math.round(
                 project.milestones.reduce(
-                  (sum, m) => sum + (m.progress * project.estimated_loading),
+                  (sum, m) => sum + (m.progress * m.estimated_loading),
                   0
                 )
               )}
@@ -228,7 +247,7 @@ export default function ProjectManagementScreen() {
                   />
                 </View>
             ) : (
-                <Text>{deadline.toDateString()}</Text>
+                <Text>{deadline.toISOString().slice(0, 10)}</Text>
             )}
             </View>
           </View>
@@ -261,15 +280,15 @@ export default function ProjectManagementScreen() {
                 onPress={() => router.push({ pathname: '/milestones/[milestone_id]', params: { milestone_id: m.milestone_id, project_id: id } })}
                 className="mt-2 border border-gray-200 rounded-lg p-4"
               >
-                <View className="flex-row justify-between items-center">
+                <View className="flex-col">
                   <Text className="font-medium">{m.milestone_name}</Text>
-                  <Text className="text-sm">ddl: {new Date(m.ddl).toDateString()}</Text>
+                  <Text className='text-sm text-gray-500 mt-1'>Deadline: {new Date(m.ddl).toISOString().slice(0, 10)}</Text>
                 </View>
                 <View className="h-3 bg-gray-200 rounded-full mt-4 overflow-hidden">
                   <View className="h-3 bg-[#F8C8C3] rounded-full" style={{ width: `${m.progress * 100}%` }} />
                 </View>
                 <Text className="text-right text-xs mt-1">
-                  {Math.round((1 - m.progress) * project.estimated_loading)} hours left
+                  {Math.round((1 - m.progress) * m.estimated_loading)} hours left
                 </Text>
               </TouchableOpacity>
             ))}
@@ -285,14 +304,14 @@ export default function ProjectManagementScreen() {
                 onPress={() => router.push({ pathname: '/milestones/[milestone_id]', params: { milestone_id: m.milestone_id, project_id: id } })}
                 className="mt-2 border border-gray-200 rounded-lg p-4"
               >
-                <View className="flex-row justify-between items-center">
+                <View className="flex-col">
                   <Text className="font-medium">{m.milestone_name}</Text>
-                  <Text className="text-sm">ddl: {new Date(m.ddl).toDateString()}</Text>
+                  <Text className='text-sm text-gray-500 mt-1'>Deadline: {new Date(m.ddl).toISOString().slice(0, 10)}</Text>
                 </View>
                 <View className="h-3 bg-gray-200 rounded-full mt-4 overflow-hidden">
                   <View className="h-3 bg-gray-300 rounded-full w-0" />
                 </View>
-                <Text className="text-right text-xs mt-1">{project.estimated_loading} hours left</Text>
+                <Text className="text-right text-xs mt-1">{Math.round((1 - m.progress) * m.estimated_loading)} hours left</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -312,14 +331,14 @@ export default function ProjectManagementScreen() {
                 }
                 className="mt-2 border border-gray-200 rounded-lg p-4"
                 >
-                <View className="flex-row justify-between items-center">
+                <View className="flex-col">
                   <Text className="font-medium">{m.milestone_name}</Text>
-                  <Text className="text-sm">ddl: {new Date(m.ddl).toDateString()}</Text>
+                  <Text className='text-sm text-gray-500 mt-1'>Deadline: {new Date(m.ddl).toISOString().slice(0, 10)}</Text>
                 </View>
                 <View className="h-3 bg-gray-200 rounded-full mt-4 overflow-hidden">
                   <View className="h-3 bg-[#F8C8C3] rounded-full w-full" />
                 </View>
-                <Text className="text-right text-xs mt-1">0 hours left</Text>
+                <Text className="text-right text-xs mt-1">{Math.round((1 - m.progress) * m.estimated_loading)} hours left</Text>
               </TouchableOpacity>
             ))}
           </View>

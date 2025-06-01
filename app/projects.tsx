@@ -1,10 +1,10 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Dimensions, FlatList, Image, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AddProjectModal from '../components/AddProjectModal';
 import { useSession } from '../context/SessionContext';
-
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -72,9 +72,11 @@ export default function Projects() {
 
 
 
-  useEffect(() => {
-    fetchProjects();
-  }, []);
+useFocusEffect(
+    useCallback(() => {
+        fetchProjects();
+    }, [])
+);
 
   const screenWidth = Dimensions.get('window').width;
   const renderProgressBar = (currentTask: string, progress: number) => {
