@@ -118,14 +118,7 @@ export default function AddProjectModal({
       setFiles(prev => [...prev, file]);
 
       // 可選：顯示上傳成功訊息（非必要）
-      setChatMessages(prev => [
-        ...prev,
-        {
-          text: `📎 Uploaded file: ${file.name}`,
-          from: 'user',
-          timestamp: new Date().toISOString(),
-        }
-      ]);
+      
 
     } catch (error) {
       console.error('Document picker error:', error);
@@ -279,64 +272,66 @@ export default function AddProjectModal({
       return;
     }
 
-    setStepReady(true);
-    
-    try {
-        const savedDraft = await storage.get(`draft-${projectId}`);
-        if (savedDraft) {
-          setChatMessages([{
-            text: savedDraft,
-            from: 'bot',
-            timestamp: new Date().toISOString(),
-          }]);
-          return;
-        }
+    // 先檢查本地 chat 紀錄
+    const savedChat = await storage.get(`chat-${projectId}`);
+    if (savedChat?.length > 0) {
+      setChatMessages(savedChat);
+      setStepReady(true);
+      return;
+    }
 
-        // 顯示 loading 訊息
-        setChatMessages([{
-          text: '⏳ 請稍候，AI 正在閱讀您的文件...',
-          from: 'bot',
-          timestamp: new Date().toISOString()
-        }]);
-
-        const formData = new FormData();
-        const file = files[0];
-        formData.append('file', {
-          uri: file.uri,
-          name: file.name,
-          type: file.mimeType || 'application/pdf',
-        } as any);
-
-        const res = await fetch(`${API_URL}/assistant/project_draft`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${session?.token}`,
-          },
-          body: formData,
-        });
-
-        if (!res.ok) throw new Error('Gemini analysis failed');
-        const data = await res.json();
-        const draft = data.response || JSON.stringify(data.projects?.[0], null, 2);
-
-        // 儲存草稿到 AsyncStorage
-        await storage.set(`draft-${projectId}`, draft);
-
-        setChatMessages([{
-          text: draft,
-          from: 'bot',
-          timestamp: new Date().toISOString()
-        }]);
-      } catch (e) {
-        console.error(e);
-        Alert.alert('Failed to fetch draft');
-        setChatMessages([{
-          text: '❌ 無法取得 Gemini 回覆，請稍後再試。',
-          from: 'bot',
-          timestamp: new Date().toISOString()
-        }]);
+    setChatMessages(prev => [
+      ...prev,
+      {
+        text: `📎 Uploaded file: ${files[0].name}`,
+        from: 'user',
+        timestamp: new Date().toISOString(),
+      },
+      {
+        text: '⏳ 請稍候，AI 正在閱讀您的文件...',
+        from: 'bot',
+        timestamp: new Date().toISOString()
       }
+    ]);
+    setStepReady(true);
+
+    try {
+      const formData = new FormData();
+      const file = files[0];
+      formData.append('file', {
+        uri: file.uri,
+        name: file.name,
+        type: file.mimeType || 'application/pdf',
+      } as any);
+
+      const res = await fetch(`${API_URL}/assistant/project_draft`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session?.token}`,
+        },
+        body: formData,
+      });
+
+      const data = await res.json();
+      const draft = data.response || JSON.stringify(data.projects?.[0], null, 2);
+
+      setChatMessages(prev => [...prev, {
+        text: draft,
+        from: 'bot' as const,
+        timestamp: new Date().toISOString()
+      }]);
+
+    } catch (e) {
+      console.error(e);
+      Alert.alert('Failed to fetch draft');
+      setChatMessages(prev => [...prev, {
+        text: '❌ 無法取得 Gemini 回覆，請稍後再試。',
+        from: 'bot',
+        timestamp: new Date().toISOString()
+      }]);
+    }
   };
+
 
 
 
