@@ -4,7 +4,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Checkbox } from 'expo-checkbox';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Animated, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Circle } from 'react-native-progress';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -29,6 +29,106 @@ interface Milestone {
   tasks: Task[];
 }
 
+// Loading Animation Component
+const LoadingAnimation = ({ visible }: { visible: boolean }) => {
+  const [animValue] = useState(new Animated.Value(0));
+  const [pulseValue] = useState(new Animated.Value(1));
+
+  useEffect(() => {
+    if (visible) {
+      // Rotation animation
+      const rotateAnimation = Animated.loop(
+        Animated.timing(animValue, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: true,
+        })
+      );
+
+      // Pulse animation
+      const pulseAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseValue, {
+            toValue: 1.2,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseValue, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+
+      rotateAnimation.start();
+      pulseAnimation.start();
+
+      return () => {
+        rotateAnimation.stop();
+        pulseAnimation.stop();
+      };
+    }
+  }, [visible, animValue, pulseValue]);
+
+  if (!visible) return null;
+
+  const rotation = animValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  return (
+    <Modal
+      visible={visible}
+      transparent={true}
+      animationType="fade"
+    >
+      <View className="flex-1 justify-center items-center bg-black bg-opacity-50">
+        <View className="bg-white p-8 rounded-xl items-center shadow-lg">
+          <Animated.View
+            style={{
+              transform: [
+                { rotate: rotation },
+                { scale: pulseValue }
+              ]
+            }}
+            className="mb-4"
+          >
+            <Ionicons name="refresh" size={48} color="#F29389" />
+          </Animated.View>
+          
+          <Text className="text-lg font-semibold text-gray-800 mb-2">
+            Updating Your Milestone Planning
+          </Text>
+          
+          <Text className="text-sm text-gray-600 text-center">
+            Please wait while we save your changes...
+          </Text>
+          
+          {/* Progress dots */}
+          <View className="flex-row mt-4 space-x-1">
+            {[0, 1, 2].map((index) => (
+              <Animated.View
+                key={index}
+                style={{
+                  opacity: animValue.interpolate({
+                    inputRange: [0, 0.33, 0.66, 1],
+                    outputRange: index === 0 ? [1, 0.3, 0.3, 1] : 
+                               index === 1 ? [0.3, 1, 0.3, 0.3] : 
+                               [0.3, 0.3, 1, 0.3],
+                  }),
+                }}
+                className="w-2 h-2 bg-[#F29389] rounded-full"
+              />
+            ))}
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 export default function MilestoneDetailScreen() {
   const router = useRouter();
   const { milestone_id, project_id } = useLocalSearchParams();
@@ -47,6 +147,9 @@ export default function MilestoneDetailScreen() {
   const [modalTaskDescription, setModalTaskDescription] = useState('');
   const [modalTaskEstimatedLoading, setModalTaskEstimatedLoading] = useState('');
   const [modalTaskDeadline, setModalTaskDeadline] = useState(new Date());
+  
+  // Loading state
+  const [isTaskLoading, setIsTaskLoading] = useState(false);
   
   // Expandable task states
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
@@ -227,6 +330,8 @@ export default function MilestoneDetailScreen() {
       return;
     }
 
+    setIsTaskLoading(true); // Start loading animation
+
     try {
       if (isAddingTask) {
         // Create new task
@@ -300,10 +405,14 @@ export default function MilestoneDetailScreen() {
       closeTaskModal();
     } catch {
       alert(`Failed to ${isAddingTask ? 'create' : 'update'} task.`);
+    } finally {
+      setIsTaskLoading(false); // Stop loading animation
     }
   };
 
   const handleDeleteTask = async (taskId: string) => {
+    setIsTaskLoading(true); // Start loading animation
+
     try {
       const res = await fetch(`${API_URL}/task?task_id=${taskId}`, {
         method: 'DELETE',
@@ -317,6 +426,8 @@ export default function MilestoneDetailScreen() {
       alert('Task deleted successfully.');
     } catch {
       alert('Failed to delete task.');
+    } finally {
+      setIsTaskLoading(false); // Stop loading animation
     }
   };
 
@@ -489,6 +600,9 @@ export default function MilestoneDetailScreen() {
         </View>
       </ScrollView>
 
+      {/* Loading Animation */}
+      <LoadingAnimation visible={isTaskLoading} />
+
       {/* Task Edit/Add Modal */}
       <Modal
         visible={showTaskModal}
@@ -543,17 +657,19 @@ export default function MilestoneDetailScreen() {
                 />
               </View>}
 
-              <View className="mb-6">
-                <Text className="text-sm text-gray-600 mb-2">Due Date</Text>
-                <View className="bg-gray-100 p-3 rounded-lg">
-                  <DateTimePicker
-                    value={modalTaskDeadline}
-                    mode="date"
-                    display={Platform.OS === 'ios' ? 'compact' : 'default'}
-                    onChange={(event, date) => date && setModalTaskDeadline(date)}
-                  />
+                <View className="mb-6">
+                  <Text className="text-sm text-gray-600 mb-2">Due Date</Text>
+                  <View className="bg-gray-100 p-3 rounded-lg">
+                    <DateTimePicker
+                      value={modalTaskDeadline || new Date()}
+                      mode="date"
+                      display={Platform.OS === 'ios' ? 'compact' : 'default'}
+                      onChange={(event, date) => setModalTaskDeadline(date || new Date())}
+                      minimumDate={new Date(new Date().setHours(0, 0, 0, 0))}
+                      maximumDate={deadline}
+                    />
+                  </View>
                 </View>
-              </View>
             </ScrollView>
 
             <View className="flex-row gap-3">
@@ -566,6 +682,7 @@ export default function MilestoneDetailScreen() {
               <TouchableOpacity
                 onPress={saveTaskFromModal}
                 className="flex-1 bg-[#F29389] py-3 rounded-lg"
+                disabled={isTaskLoading}
               >
                 <Text className="text-center font-semibold text-white">
                   {isAddingTask ? 'Add' : 'Save'}
