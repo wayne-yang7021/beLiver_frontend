@@ -1,3 +1,4 @@
+import { Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as DocumentPicker from 'expo-document-picker';
@@ -38,6 +39,8 @@ export default function AddProjectModal({
   const [input, setInput] = useState('');
   const flatListRef = useRef<FlatList>(null);
   const { session } = useSession();
+  const [stepReady, setStepReady] = useState(false);
+
 
   const storage = {
     set: async (key: string, value: any) => {
@@ -108,22 +111,21 @@ export default function AddProjectModal({
   const pickDocument = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({ multiple: false });
+      // console.log(result);
       if (result.canceled || !result.assets?.length) return;
-
+      
       const file = result.assets[0];
       setFiles(prev => [...prev, file]);
 
-      setChatMessages(prev => [
-        ...prev,
-        { text: `📎 Uploaded file: ${file.name}`, from: 'user', timestamp: new Date().toISOString() },
-        { text: 'Thanks, file received!', from: 'bot', timestamp: new Date().toISOString() },
-      ]);
+      // 可選：顯示上傳成功訊息（非必要）
+      
 
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
     } catch (error) {
       console.error('Document picker error:', error);
+      Alert.alert('Failed to pick document');
     }
   };
+
 
   const sendMessage = async () => {
     if (!input.trim()) return;
@@ -144,7 +146,7 @@ export default function AddProjectModal({
     setInput('');
 
     try {
-      const res = await fetch(`${API_URL}/assistant/previewMessage/stream`, {
+      const res = await fetch(`${API_URL}/assistant/previewMessage`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${session?.token}`,
@@ -203,8 +205,6 @@ export default function AddProjectModal({
   };
 
 
-
-
   const handleAddProject = async () => {
     if (!title.trim()) {
       Alert.alert('Project name is required.');
@@ -258,6 +258,81 @@ export default function AddProjectModal({
     }
   };
 
+
+  const startConversation = async () => {
+    if (files.length === 0) {
+      setChatMessages([{
+        text: '麻煩您提供上述的資訊來，或是如果你並沒有要進行排程的話請直接按下 Add。',
+        from: 'bot',
+        timestamp: new Date().toISOString()
+      }]);
+      setStepReady(true);
+      return;
+    }
+
+    // 先檢查本地 chat 紀錄
+    const savedChat = await storage.get(`chat-${projectId}`);
+    if (savedChat?.length > 0) {
+      setChatMessages(savedChat);
+      setStepReady(true);
+      return;
+    }
+
+    setChatMessages(prev => [
+      ...prev,
+      {
+        text: `📎 Uploaded file: ${files[0].name}`,
+        from: 'user',
+        timestamp: new Date().toISOString(),
+      },
+      {
+        text: '⏳ 請稍候，AI 正在閱讀您的文件...',
+        from: 'bot',
+        timestamp: new Date().toISOString()
+      }
+    ]);
+    setStepReady(true);
+
+    try {
+      const formData = new FormData();
+      const file = files[0];
+      formData.append('file', {
+        uri: file.uri,
+        name: file.name,
+        type: file.mimeType || 'application/pdf',
+      } as any);
+
+      const res = await fetch(`${API_URL}/assistant/project_draft`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session?.token}`,
+        },
+        body: formData,
+      });
+
+      const data = await res.json();
+      const draft = data.response || JSON.stringify(data.projects?.[0], null, 2);
+
+      setChatMessages(prev => [...prev, {
+        text: draft,
+        from: 'bot' as const,
+        timestamp: new Date().toISOString()
+      }]);
+
+    } catch (e) {
+      console.error(e);
+      Alert.alert('Failed to fetch draft');
+      setChatMessages(prev => [...prev, {
+        text: '❌ 無法取得 Gemini 回覆，請稍後再試。',
+        from: 'bot',
+        timestamp: new Date().toISOString()
+      }]);
+    }
+  };
+
+
+
+
   const resetAll = async () => {
     await clearProjectStorage(projectId);
     setTitle('');
@@ -277,9 +352,17 @@ export default function AddProjectModal({
           </View>
 
           {/* Reset 按鈕 */}
-          <TouchableOpacity onPress={resetAll} className="absolute left-6 top-4">
-            <Text className="text-[#F29389] font-bold">Reset</Text>
-          </TouchableOpacity>
+          <View className="absolute left-6 top-4 flex-row items-center gap-4">
+            {!stepReady ? (<TouchableOpacity onPress={resetAll} className="flex-row items-center">
+              <Feather name="rotate-ccw" size={18} color="#F29389" />
+              <Text className="text-[#F29389] font-semibold ml-1">Reset</Text>
+            </TouchableOpacity>
+            ):(
+              <TouchableOpacity onPress={() => setStepReady(false)}>
+                <Text className="text-[#F29389] font-bold">Last</Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
           {/* Cancel 按鈕 */}
           <TouchableOpacity onPress={onClose} className="absolute right-6 top-4">
@@ -288,81 +371,56 @@ export default function AddProjectModal({
 
           <Text className="text-xl font-bold text-center">Add New Project</Text>
 
-          {/* Title */}
-          <View className="mt-4">
-            <Text className="font-semibold text-[#555] mb-1">
-              Your Project Name: <Text className="text-red-500">*</Text>
-            </Text>
-            <TextInput
-              className="bg-gray-100 p-3 rounded text-gray-700"
-              value={title}
-              onChangeText={setTitle}
-              placeholder="project name"
-              placeholderTextColor="#aaa"
-            />
-          </View>
-
-          {/* Deadline */}
-          <View className="mt-4">
-            <Text className="font-semibold text-[#555] mb-1">
-              Deadline: <Text className="text-red-500">*</Text>
-            </Text>
-            <Pressable onPress={() => setShowPicker(true)}>
-              <View className="flex-row gap-2">
-                <View className="flex-1 rounded bg-gray-100 px-4 py-2 justify-center">
-                  <Text className="text-[#F29389]">
-                    {deadline ? deadline.toLocaleDateString() : 'Select date'}
-                  </Text>
-                </View>
-                <View className="flex-1 rounded bg-gray-100 px-4 py-2 justify-center">
-                  <Text className="text-[#F29389]">
-                    {deadline ? deadline.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Select time'}
-                  </Text>
-                </View>
-              </View>
-            </Pressable>
-            {showPicker && Platform.OS === 'ios' && (
-              <DateTimePicker
-                value={deadline || new Date()}
-                onChange={(e, date) => {
-                  if (date) setDeadline(date);
-                  setShowPicker(false);
-                }}
-                mode="datetime"
-                display="spinner"
-                themeVariant="light"
-              />
-            )}
-            {showPicker && Platform.OS === 'android' && (
-              <DateTimePicker
-                value={deadline || new Date()}
-                onChange={(e, date) => {
-                  setShowPicker(false);
-                  if (date) setDeadline(date);
-                }}
-                mode="datetime"
-                display="default"
-              />
-            )}
-          </View>
-
-          {/* 對話與檔案上傳 */}
-          {title.trim() && deadline && (
+          {!stepReady ? (
             <>
-              {files.length > 0 && (
-                <View className="mt-4">
-                  <Text className="font-semibold mb-1">Uploaded Files:</Text>
-                  {files.map((file, index) => (
-                    <View key={index} className="bg-gray-100 p-2 rounded mb-1 flex-row justify-between items-center">
-                      <Text className="text-sm text-gray-700">{file.name}</Text>
-                      <Text className="text-xs text-gray-500">{file.mimeType || 'unknown'}</Text>
+              <View className="mt-4">
+                <Text className="font-semibold text-[#555] mb-1">
+                  Your Project Name: <Text className="text-red-500">*</Text>
+                </Text>
+                <TextInput
+                  className="bg-gray-100 p-3 rounded text-gray-700"
+                  value={title}
+                  onChangeText={setTitle}
+                  placeholder="project name"
+                  placeholderTextColor="#aaa"
+                />
+              </View>
+
+              <View className="mt-4">
+                <Text className="font-semibold text-[#555] mb-1">
+                  Deadline: <Text className="text-red-500">*</Text>
+                </Text>
+                <Pressable onPress={() => setShowPicker(true)}>
+                  <View className="flex-row gap-2">
+                    <View className="flex-1 rounded bg-gray-100 px-4 py-2 justify-center">
+                      <Text className="text-[#F29389]">
+                        {deadline ? deadline.toLocaleDateString() : 'Select date'}
+                      </Text>
                     </View>
-                  ))}
-                </View>
+                    <View className="flex-1 rounded bg-gray-100 px-4 py-2 justify-center">
+                      <Text className="text-[#F29389]">
+                        {deadline ? deadline.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Select time'}
+                      </Text>
+                    </View>
+                  </View>
+                </Pressable>
+              </View>
+
+              {showPicker && (
+                <DateTimePicker
+                  value={deadline || new Date()}
+                  onChange={(e, date) => {
+                    if (date) setDeadline(date);
+                    setShowPicker(false);
+                  }}
+                  mode="datetime"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  themeVariant="light"
+                />
               )}
 
               <TouchableOpacity
-                className="mt-4 p-4 rounded-xl border border-dashed border-[#F29389] bg-[#F8C8C3] bg-opacity-20 gap-2"
+                className="mt-6 p-4 rounded-xl border border-dashed border-[#F29389] bg-[#F8C8C3] bg-opacity-20 gap-2"
                 onPress={pickDocument}
               >
                 <Text className="text-center text-[#5E1526] font-semibold text-2xl py-2">+</Text>
@@ -370,13 +428,40 @@ export default function AddProjectModal({
                 <Text className="text-center text-md text-[#5E1526] font-semibold mb-4">(.docx or .pdf)</Text>
               </TouchableOpacity>
 
+              {files.length > 0 && (
+                <View className="mt-4">
+                  <Text className="text-[#5E1526] font-bold mb-2">Uploaded Files:</Text>
+                  {files.map((file, index) => (
+                    <View key={index} className="flex-row items-center justify-between bg-gray-100 p-3 rounded-lg mb-2">
+                      <Text className="text-gray-800 flex-1" numberOfLines={1}>
+                        📄 {file.name}
+                      </Text>
+                      <Text className="text-xs text-gray-500 ml-2">
+                        {file.type || 'unknown'}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+
+              <TouchableOpacity
+                className={`mt-6 rounded-full py-3 px-6 w-fit mx-auto ${title.trim() && deadline ? 'bg-[#5E1526]' : 'bg-gray-400'}`}
+                disabled={!title.trim() || !deadline}
+                onPress={startConversation}
+              >
+                <Text className="text-center text-white font-semibold">Next</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
               <View className="flex-1 mt-4 mb-2">
                 <FlatList
                   ref={flatListRef}
                   data={chatMessages}
                   keyExtractor={(_, index) => index.toString()}
                   renderItem={({ item }) => (
-                    <View className={`rounded-xl px-4 py-2 mb-2 max-w-[75%] ${item.from === 'user' ? 'bg-[#F29389] self-end' : 'bg-gray-100 self-start'}`}>
+                    <View className={`rounded-xl px-4 py-2 mb-2 max-w-[80%] ${item.from === 'user' ? 'bg-[#F29389] self-end' : 'bg-gray-100 self-start'}`}>
                       <Markdown>{item.text}</Markdown>
                     </View>
                   )}
@@ -395,17 +480,15 @@ export default function AddProjectModal({
                   <Text className="ml-2 text-[#F29389] text-lg">➤</Text>
                 </TouchableOpacity>
               </View>
+
+              <TouchableOpacity
+                className="mt-4 rounded-full py-3 px-6 w-fit mx-auto bg-[#5E1526]"
+                onPress={handleAddProject}
+              >
+                <Text className="text-center text-white font-semibold">+ Add</Text>
+              </TouchableOpacity>
             </>
           )}
-
-          {/* Add 按鈕 */}
-          <TouchableOpacity
-            className={`mt-4 rounded-full py-3 px-6 w-fit mx-auto ${title.trim() && deadline ? 'bg-[#5E1526]' : 'bg-gray-400'}`}
-            disabled={!title.trim() || !deadline}
-            onPress={handleAddProject}
-          >
-            <Text className="text-center text-white font-semibold">+ Add</Text>
-          </TouchableOpacity>
         </View>
       </View>
     </Modal>

@@ -177,7 +177,14 @@ export default function HomeScreen() {
     setEditVisible(true);
   };
 
-  const filteredTasks = tasks.filter(task => task.date === selectedDate.toDateString());
+  const filteredTasks = tasks
+    .filter(task => task.date === selectedDate.toDateString())
+    .sort((a, b) => {
+      // 未完成排前面，已完成排後面
+      if (a.isCompleted === b.isCompleted) return 0;
+      return a.isCompleted ? 1 : -1;
+    });
+
 
   return (
     <SafeAreaView className="flex-1 bg-[#F8C8C3]">
@@ -258,7 +265,9 @@ export default function HomeScreen() {
                   </TouchableOpacity>
                   {task.estimated_loading && (
                     <View className="ml-4">
-                      <Text className="text-red-800">ETC: <Text className='font-semibold'>{task.estimated_loading} hrs</Text></Text>
+                      <Text className="text-red-800 font-semibold">
+                        ETC: {task.estimated_loading} hrs
+                      </Text>
                     </View>
                   )}
                 </View>
