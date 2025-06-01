@@ -44,9 +44,6 @@ export default function HomeScreen() {
   const [editEtc, setEditEtc] = useState(0);
   const [editDetails, setEditDetails] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-
-
   const scrollViewRef = useRef<ScrollView>(null);
   const scrollX = useRef(0);
 
@@ -57,20 +54,20 @@ export default function HomeScreen() {
 
   useEffect(() => {
     const fetchTasks = async () => {
-      setIsLoading(true);
       try {
         const response = await fetch(`${API_URL}/tasks?date=${selectedDateFormatted}`, {
           headers: {
-            // 'accept': 'application/json',
-            'Authorization': `Bearer ${session?.token}`,
+            'Authorization': `Bearer ${session?.token || ''}`,
           },
         });
         if (!response.ok) {
           throw new Error('Failed to fetch tasks');
         }
         const data = await response.json();
-        // console.log('Fetched tasks:', data);
-        const enrichedTasks = data.map((task: Task) => ({ ...task, date: selectedDate.toDateString() }));
+        const enrichedTasks = data.map((task: Task) => ({ 
+          ...task, 
+          date: selectedDate.toDateString() 
+        }));
         setTasks(enrichedTasks);
       } catch (err) {
         console.error(err);
@@ -80,13 +77,13 @@ export default function HomeScreen() {
       }
     };
 
-    fetchTasks();
-  }, [selectedDateFormatted]);
-
+    if (session?.token) {
+      fetchTasks();
+    }
+  }, [selectedDateFormatted, session?.token]);
 
   const saveEditedTask = async () => {
     if (!editingTask) return;
-
     if (!editTitle.trim() || !editEtc) {
       Alert.alert('Error', 'You must fill in the name and the time');
       return;
@@ -97,7 +94,7 @@ export default function HomeScreen() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session?.token}`,
+          Authorization: `Bearer ${session?.token || ''}`,
         },
         body: JSON.stringify({
           title: editTitle,
@@ -132,11 +129,6 @@ export default function HomeScreen() {
     }
   };
 
-
-  // useEffect(() => {
-  //   fetchTasks();
-  // }, [selectedDateIndex]);
-
   useEffect(() => {
     setTimeout(() => {
       scrollViewRef.current?.scrollTo({
@@ -153,12 +145,11 @@ export default function HomeScreen() {
       );
       setTasks(updated);
 
-      console.log('Toggling task:', task.task_id, 'to', !task.isCompleted);
       const res = await fetch(`${API_URL}/tasks/${task.task_id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session?.token}`,
+          Authorization: `Bearer ${session?.token || ''}`,
         },
         body: JSON.stringify({ isCompleted: !task.isCompleted }),
       });
@@ -181,18 +172,25 @@ export default function HomeScreen() {
   const filteredTasks = tasks
     .filter(task => task.date === selectedDate.toDateString())
     .sort((a, b) => {
-      // 未完成排前面，已完成排後面
       if (a.isCompleted === b.isCompleted) return 0;
       return a.isCompleted ? 1 : -1;
     });
 
+  // Add loading state check
+  if (!session) {
+    return (
+      <SafeAreaView className="flex-1 bg-[#F8C8C3] justify-center items-center">
+        <Text className="text-[#5E1526] text-lg">Loading...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-[#F8C8C3]">
       <View className="flex-row justify-between items-center px-6 pt-6">
         <TouchableOpacity onPress={() => router.push("/calendar")} className="flex-row items-center bg-[#F29389] py-2 px-5 rounded-full">
           <Text className="text-white mr-1 text-lg">‹</Text>
-          <Text className="text-white font-semibold"> Calendar</Text>
+          <Text className="text-white font-semibold">Calendar</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => router.push("/projects")} className="flex-row items-center bg-[#F29389] py-2 px-5 rounded-full">
           <Text className="text-white font-semibold">Projects</Text>
@@ -203,9 +201,7 @@ export default function HomeScreen() {
       <View className="px-6 mt-6 flex-row gap-12 justify-between items-center m-2">
         <View>
           <Text className="text-3xl font-semibold text-[#5E1526]">Good morning,</Text>
-          <Text className="text-3xl font-semibold text-[#5E1526]">
-            {`${session?.name ?? ''} !`}
-          </Text>
+          <Text className="text-3xl font-semibold text-[#5E1526]">{session?.name || 'User'}!</Text>
         </View>
         <Image source={require('../assets/images/liver.png')} className="w-32 h-28" style={{ resizeMode: 'contain' }} />
       </View>
@@ -214,7 +210,6 @@ export default function HomeScreen() {
         <Pressable onPress={() => scrollViewRef.current?.scrollTo({ x: Math.max(scrollX.current - ITEM_WIDTH, 0), animated: true })}>
           <Feather name="chevron-left" size={24} color="#F29389" />
         </Pressable>
-
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -244,23 +239,20 @@ export default function HomeScreen() {
             </TouchableOpacity>
           ))}
         </ScrollView>
-
         <Pressable onPress={() => scrollViewRef.current?.scrollTo({ x: scrollX.current + ITEM_WIDTH, animated: true })}>
           <Feather name="chevron-right" size={24} color="#F29389" />
         </Pressable>
       </View>
-      
+
       <View className="bg-white rounded-3xl shadow-lg mx-4 mt-6 pb-4 flex-1">
         <View className="flex-row justify-between items-center pr-6 pl-6 mt-4">
           <Text className="text-lg font-semibold text-red-900">
-            <Text className="text-lg font-semibold text-red-900">
-              {selectedDateIndex === 30
-                ? "Today's Tasks"
-                : `Tasks for ${selectedDate.toLocaleDateString()}`}
-            </Text>
+            {selectedDateIndex === 30 ? "Today's Tasks" : `Tasks for ${selectedDate.toLocaleDateString()}`}
           </Text>
           <TouchableOpacity onPress={() => setIsEditMode(!isEditMode)}>
-            <Text className={`font-medium ${isEditMode ? 'text-red-500' : 'text-[#F8C8C3]'}`}>{isEditMode ? 'Done' : 'Edit'}</Text>
+            <Text className={`font-medium ${isEditMode ? 'text-red-500' : 'text-[#F8C8C3]'}`}>
+              {isEditMode ? 'Done' : 'Edit'}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -280,32 +272,32 @@ export default function HomeScreen() {
                   <TouchableOpacity className="flex-1">
                     <Text className="text-red-800 font-bold">{task.task_title}</Text>
                   </TouchableOpacity>
-                  {task.estimated_loading && (
+                  {task.estimated_loading ? (
                     <View className="ml-4">
                       <Text className="text-red-800 font-semibold">
                         ETC: {task.estimated_loading} hrs
                       </Text>
                     </View>
-                  )}
+                  ) : null}
                 </View>
-                {task.description && (
+                {task.description ? (
                   <View className="mt-3 mb-3">
                     <Text className="text-red-700 text-justify leading-5">{task.description}</Text>
                   </View>
-                )}
+                ) : null}
                 <View className="flex-row justify-between items-center mt-2">
                   <View className="flex-1" />
                   <View className="flex-row items-center">
                     {isEditMode && (
-                        <>
-                          <TouchableOpacity className="mr-2 p-2" onPress={() => openEditModal(task)}>
-                            <Feather name="edit-2" size={20} color="#991b1b" />
-                          </TouchableOpacity>
-                          <TouchableOpacity className="mr-4 p-2" onPress={() => Alert.alert('Not implemented in API')}>
-                            <Feather name="trash-2" size={20} color="#ef4444" />
-                          </TouchableOpacity>
-                        </>
-                      )}
+                      <>
+                        <TouchableOpacity className="mr-2 p-2" onPress={() => openEditModal(task)}>
+                          <Feather name="edit-2" size={20} color="#991b1b" />
+                        </TouchableOpacity>
+                        <TouchableOpacity className="mr-4 p-2" onPress={() => Alert.alert('Not implemented in API')}>
+                          <Feather name="trash-2" size={20} color="#ef4444" />
+                        </TouchableOpacity>
+                      </>
+                    )}
                     <TouchableOpacity onPress={() => toggleTaskDone(task)}>
                       <View className={`w-6 h-6 rounded-full justify-center items-center ${
                         task.isCompleted ? 'bg-red-500' : 'bg-white border border-red-300'
@@ -321,10 +313,10 @@ export default function HomeScreen() {
         </ScrollView>
 
         {/* Edit Task Modal */}
-        <Modal 
-          animationType="slide" 
-          transparent={true} 
-          visible={editVisible} 
+        <Modal
+          animationType="slide"
+          transparent={true}
+          visible={editVisible}
           onRequestClose={() => setEditVisible(false)}
         >
           <View className="flex-1 justify-center items-center bg-black/50">
@@ -336,65 +328,61 @@ export default function HomeScreen() {
                   <Feather name="x" size={24} color="#7f1d1d" />
                 </TouchableOpacity>
               </View>
-              
               <ScrollView className="px-6 py-4">
                 {/* Title Input */}
                 <View className="mb-4">
                   <Text className="text-red-900 font-semibold mb-2 text-base">Task Title</Text>
-                  <TextInput 
-                    className="bg-pink-50 p-3 rounded-xl border border-pink-200 text-base" 
-                    value={editTitle} 
+                  <TextInput
+                    className="bg-pink-50 p-3 rounded-xl border border-pink-200 text-base"
+                    value={editTitle}
                     onChangeText={setEditTitle}
                     placeholder="Enter task title"
                     placeholderTextColor="#9ca3af"
                   />
                 </View>
-                
                 {/* Estimated Time Input */}
                 <View className="mb-4">
                   <Text className="text-red-900 font-semibold mb-2 text-base">Estimated Time (hours)</Text>
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
-                  {[0.5, 1, 1.5, 2, 3, 4].map((val) => (
-                    <TouchableOpacity
-                    key={val}
-                    onPress={() => setEditEtc(val)}
-                    className={`px-4 py-2 rounded-xl border ${
-                      editEtc === val ? 'bg-[#F29389] border-[#F29389]' : 'bg-white border-gray-300'
-                    } mr-2`}
-                    >
-                      <Text className={`font-semibold ${editEtc === val ? 'text-white' : 'text-gray-700'}`}>
-                        {val}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                    {[0.5, 1, 1.5, 2, 3, 4].map((val) => (
+                      <TouchableOpacity
+                        key={val}
+                        onPress={() => setEditEtc(val)}
+                        className={`px-4 py-2 rounded-xl border ${
+                          editEtc === val ? 'bg-[#F29389] border-[#F29389]' : 'bg-white border-gray-300'
+                        } mr-2`}
+                      >
+                        <Text className={`font-semibold ${editEtc === val ? 'text-white' : 'text-gray-700'}`}>
+                          {val}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
                   </ScrollView>
                 </View>
-
                 {/* Details Input */}
                 <View className="mb-6">
                   <Text className="text-red-900 font-semibold mb-2 text-base">Task Details</Text>
-                  <TextInput 
-                    className="bg-pink-50 p-3 rounded-xl border border-pink-200 h-32 text-base" 
-                    value={editDetails} 
-                    onChangeText={setEditDetails} 
-                    multiline 
+                  <TextInput
+                    className="bg-pink-50 p-3 rounded-xl border border-pink-200 h-32 text-base"
+                    value={editDetails}
+                    onChangeText={setEditDetails}
+                    multiline
                     textAlignVertical="top"
                     placeholder="Enter detailed description of the task..."
                     placeholderTextColor="#9ca3af"
                   />
                 </View>
               </ScrollView>
-              
               {/* Modal Footer */}
               <View className="flex-row justify-end px-6 py-4 border-t border-pink-100">
-                <TouchableOpacity 
-                  className="bg-gray-300 rounded-xl py-3 px-6 mr-3" 
+                <TouchableOpacity
+                  className="bg-gray-300 rounded-xl py-3 px-6 mr-3"
                   onPress={() => setEditVisible(false)}
                 >
                   <Text className="text-gray-700 font-medium">Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
-                  className="bg-[#F29389] rounded-xl py-3 px-6" 
+                <TouchableOpacity
+                  className="bg-[#F29389] rounded-xl py-3 px-6"
                   onPress={saveEditedTask}
                 >
                   <Text className="text-white font-medium">Save Changes</Text>
