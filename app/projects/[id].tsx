@@ -145,15 +145,33 @@ export default function ProjectManagementScreen() {
                   'Delete Project',
                   'Are you sure you want to delete this project?',
                   [
-                    { text: 'Cancel', style: 'cancel' },
-                    {
-                      text: 'Delete',
-                      style: 'destructive',
-                      onPress: () => {
-                        setProject(null);
-                        router.back();
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                    try {
+                      const res = await fetch(`${API_URL}/project?project_id=${id}`, {
+                      method: 'DELETE',
+                      headers: {
+                        Authorization: `Bearer ${session?.token}`,
                       },
+                      });
+                      
+                      if (!res.ok) {
+                      const errorText = await res.text();
+                      console.error('Failed to delete project:', errorText);
+                      Alert.alert('Error', 'Failed to delete project.');
+                      return;
+                      }
+                      setProject(null);
+                      router.back();
+                    } catch (error) {
+                      console.error('Error deleting project:', error);
+                      Alert.alert('Error', 'Failed to delete project.');
+                    }
                     },
+                  },
                   ]
                 );
               }}
