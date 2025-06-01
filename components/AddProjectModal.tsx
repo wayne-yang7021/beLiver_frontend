@@ -4,6 +4,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import * as DocumentPicker from 'expo-document-picker';
 import { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   FlatList,
   Modal,
@@ -15,7 +16,9 @@ import {
   View,
 } from 'react-native';
 import Markdown from 'react-native-markdown-display';
+import { TypingAnimation } from 'react-native-typing-animation';
 import { useSession } from '../context/SessionContext';
+
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -32,14 +35,19 @@ export default function AddProjectModal({
   const [deadline, setDeadline] = useState<Date | null>(null);
   const [showPicker, setShowPicker] = useState(false);
   const [files, setFiles] = useState<any[]>([]);
+  const [projectJson, setProjectJson] = useState<any>(null); // 預設 null
   const [chatMessages, setChatMessages] = useState<
     { text: string; from: 'user' | 'bot'; timestamp: string }[]
   >([]);
-
+  const [typingPrefix, setTypingPrefix] = useState('');
   const [input, setInput] = useState('');
   const flatListRef = useRef<FlatList>(null);
   const { session } = useSession();
   const [stepReady, setStepReady] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+
+  
 
 
   const storage = {
@@ -86,7 +94,12 @@ export default function AddProjectModal({
       if (savedChat) setChatMessages(savedChat);
       if (savedFiles) setFiles(savedFiles);
     };
+    const loadJson = async () => {
+    const savedJson = await storage.get(`json-${projectId}`);
+      if (savedJson) setProjectJson(savedJson);
+    };
 
+    loadJson();
     loadStorage();
   }, [visible, projectId]);
 
@@ -109,6 +122,7 @@ export default function AddProjectModal({
 
 
   const pickDocument = async () => {
+    setIsLoading(true);
     try {
       const result = await DocumentPicker.getDocumentAsync({ multiple: false });
       // console.log(result);
@@ -117,12 +131,11 @@ export default function AddProjectModal({
       const file = result.assets[0];
       setFiles(prev => [...prev, file]);
 
-      // 可選：顯示上傳成功訊息（非必要）
-      
-
     } catch (error) {
       console.error('Document picker error:', error);
       Alert.alert('Failed to pick document');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -142,70 +155,90 @@ export default function AddProjectModal({
       timestamp: new Date().toISOString(),
     };
 
+
     setChatMessages(prev => [...prev, userMsg, botMsg]);
     setInput('');
+    setIsTyping(true); 
+
+    // setTypingPrefix('AI 正在重新規劃任務');
 
     try {
-      const res = await fetch(`${API_URL}/assistant/previewMessage`, {
+      const savedJson = await storage.get(`json-${projectId}`);
+      if (!savedJson) {
+        throw new Error('❌ 找不到專案 JSON，無法重新規劃');
+      }
+
+      const userOnlyHistory = [...chatMessages, userMsg]
+        .filter(m => m.from === 'user')
+        .map(m => ({
+          sender: m.from,
+          message: m.text,
+          timestamp: m.timestamp,
+        }));
+      const wrappedJson = { projects: savedJson };
+      console.log("Json now: ", wrappedJson);
+      console.log("User History: ", userOnlyHistory);
+      const res = await fetch(`${API_URL}/assistant/replan`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${session?.token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          project_id: projectId,
-          user_id: session?.user_id,
-          message: input,
-          chat_history: [...chatMessages, userMsg].map(m => ({
-            sender: m.from,
-            message: m.text,
-            timestamp: m.timestamp,
-          })),
-          uploaded_files: files.map(f => ({
-            file_name: f.name,
-            file_url: f.uri,
-          })),
+          original_json: wrappedJson,
+          chat_history: userOnlyHistory,
         }),
       });
 
-      if (!res.body) throw new Error('No response body');
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder('utf-8');
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-
-        setChatMessages(prev => {
-          const newPrev = [...prev];
-          newPrev[newPrev.length - 1] = {
-            ...newPrev[newPrev.length - 1],
-            text: buffer,
-          };
-          return newPrev;
-        });
-
-        flatListRef.current?.scrollToEnd({ animated: true });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Failed to replan project: ${errText}`);
       }
+
+
+      const { updated_json, markdown } = await res.json();
+
+      setChatMessages(prev => {
+        const newPrev = [...prev];
+        newPrev[newPrev.length - 1] = {
+          ...newPrev[newPrev.length - 1],
+          text: markdown,
+        };
+        return newPrev;
+      });
+
+      await storage.set(`json-${projectId}`, updated_json);
+      setProjectJson(updated_json);
+
+      flatListRef.current?.scrollToEnd({ animated: true });
     } catch (e) {
-      console.error('Streaming failed:', e);
+      console.error('Replan failed:', e);
       setChatMessages(prev => [
         ...prev.slice(0, -1),
         {
-          text: '❌ Failed to get response.',
+          text: '❌ 無法重新規劃專案，請稍後再試。',
           from: 'bot',
           timestamp: new Date().toISOString(),
         },
       ]);
+    } finally {
+      setIsTyping(false); // Stop typing indicator
     }
   };
 
+  useEffect(() => {
+    if (isTyping) {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 300);
+    }
+  }, [isTyping]);
+
+
+
 
   const handleAddProject = async () => {
+    setIsLoading(true);
     if (!title.trim()) {
       Alert.alert('Project name is required.');
       return;
@@ -216,7 +249,31 @@ export default function AddProjectModal({
       return;
     }
 
+    const uploaded_files = files.map(file => ({
+      file_url: file.uri,
+      file_name: file.name,
+    }))
+
+    const payload = {
+        project_id: projectId,
+        chat_history: chatMessages
+          .filter(m => m.from === 'user')
+          .map(m => ({
+            sender: m.from,
+            message: m.text,
+            timestamp: m.timestamp || new Date().toISOString(),
+          })),
+        uploaded_files: uploaded_files,
+        projects: Array.isArray(projectJson)
+          ? (Array.isArray(projectJson[0]) ? projectJson[0] : projectJson)
+          : [projectJson],
+      };
+
+      console.log('📦 Sending payload:\n', JSON.stringify(payload, null, 2));
+
+    
     try {
+      // ✅ 先建立新專案，取得 project_id
       const res = await fetch(`${API_URL}/assistant/newProject`, {
         method: 'POST',
         headers: {
@@ -224,32 +281,64 @@ export default function AddProjectModal({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          project_id: projectId,
-          name: title,
-          due_date: deadline.toISOString(),
-          chat_history: chatMessages.map(msg => ({
-            sender: msg.from,
-            message: msg.text,
-            timestamp: msg.timestamp || new Date().toISOString(),
-          })),
-          uploaded_files: files.map(file => ({
-            file_url: file.uri,
-            file_name: file.name,
-          })),
-        }),
-      });
+            project_id: projectId,
+            chat_history: chatMessages
+                      .filter(m => m.from === 'user')
+                      .map(m => ({
+                        sender: m.from,
+                        message: m.text,
+                        timestamp: m.timestamp || new Date().toISOString(),
+                      })),
+            uploaded_files: uploaded_files,
+            projects: Array.isArray(projectJson)
+                      ? (Array.isArray(projectJson[0]) ? projectJson[0] : projectJson)
+                      : [projectJson],
 
+          }),
+      });
       if (!res.ok) throw new Error('Failed to create project');
       const data = await res.json();
-      console.log('Project created:', data);
+      const newProjectId = data.project_id;
+
+      // ✅ 再用 newProjectId 上傳檔案
+      let uploadedFiles = [];
+      if (files.length > 0) {
+        const formData = new FormData();
+        files.forEach(file => {
+          formData.append('files', {
+            uri: file.uri,
+            name: file.name,
+            type: file.mimeType || 'application/pdf',
+          } as any);
+        });
+        formData.append('projectId', newProjectId);
+
+        const uploadRes = await fetch(`${API_URL}/upload`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${session?.token}`,
+          },
+          body: formData,
+        });
+
+        if (!uploadRes.ok) throw new Error('File upload failed');
+        const uploadData = await uploadRes.json();
+        uploadedFiles = uploadData.files || [];
+      }
+
+      // （可選）你也可以再 PATCH 一次 project 把 uploaded_files 更新進資料庫，或就保留原本的檔案表關聯即可
 
       resetAll();
       onClose();
     } catch (e) {
       console.error(e);
       Alert.alert('Failed to create project');
+    } finally {
+      setIsLoading(false);
     }
   };
+
+
 
   const clearProjectStorage = async (id: string) => {
     const keys = ['project', 'deadline', 'chat', 'files'];
@@ -270,28 +359,33 @@ export default function AddProjectModal({
       return;
     }
 
-    // 先檢查本地 chat 紀錄
     const savedChat = await storage.get(`chat-${projectId}`);
+    const savedJson = await storage.get(`json-${projectId}`);
+
     if (savedChat?.length > 0) {
       setChatMessages(savedChat);
+      if (savedJson) setProjectJson(savedJson);
       setStepReady(true);
       return;
     }
+    // setTypingPrefix('AI 正在閱讀您的文件');
 
-    setChatMessages(prev => [
-      ...prev,
-      {
-        text: `📎 Uploaded file: ${files[0].name}`,
-        from: 'user',
-        timestamp: new Date().toISOString(),
-      },
-      {
-        text: '⏳ 請稍候，AI 正在閱讀您的文件...',
-        from: 'bot',
-        timestamp: new Date().toISOString()
-      }
-    ]);
+    const uploadMsg = {
+      text: `📎 Uploaded file: ${files[0].name}`,
+      from: 'user' as const,
+      timestamp: new Date().toISOString(),
+    };
+
+    const botMsg = {
+      text: '',
+      from: 'bot' as const,
+      timestamp: new Date().toISOString(),
+    };
+
+
+    setChatMessages(prev => [...prev, uploadMsg, botMsg]);
     setStepReady(true);
+    setIsTyping(true);
 
     try {
       const formData = new FormData();
@@ -313,6 +407,12 @@ export default function AddProjectModal({
       const data = await res.json();
       const draft = data.response || JSON.stringify(data.projects?.[0], null, 2);
 
+      // ✅ 儲存 JSON 結構
+      if (data.projects) {
+        await storage.set(`json-${projectId}`, data.projects);
+        setProjectJson(data.projects);
+      }
+
       setChatMessages(prev => [...prev, {
         text: draft,
         from: 'bot' as const,
@@ -327,6 +427,8 @@ export default function AddProjectModal({
         from: 'bot',
         timestamp: new Date().toISOString()
       }]);
+    } finally {
+      setIsTyping(false);
     }
   };
 
@@ -427,6 +529,12 @@ export default function AddProjectModal({
                 <Text className="text-center text-md text-[#5E1526] font-semibold">Upload your project requirements file</Text>
                 <Text className="text-center text-md text-[#5E1526] font-semibold mb-4">(.docx or .pdf)</Text>
               </TouchableOpacity>
+              {isLoading && (
+                <View className="items-center justify-center py-4">
+                  <ActivityIndicator size="large" color="#F29389" />
+                </View>
+              )}
+
 
               {files.length > 0 && (
                 <View className="mt-4">
@@ -460,11 +568,31 @@ export default function AddProjectModal({
                   ref={flatListRef}
                   data={chatMessages}
                   keyExtractor={(_, index) => index.toString()}
-                  renderItem={({ item }) => (
-                    <View className={`rounded-xl px-4 py-2 mb-2 max-w-[80%] ${item.from === 'user' ? 'bg-[#F29389] self-end' : 'bg-gray-100 self-start'}`}>
-                      <Markdown>{item.text}</Markdown>
-                    </View>
-                  )}
+                  renderItem={({ item }) => {
+                      const isTypingBubble = item.from === 'bot' && item.text === '';
+
+                      return (
+                        <View className={`rounded-xl px-4 py-2 mb-2 max-w-[80%] ${item.from === 'user' ? 'bg-[#F29389] self-end' : 'bg-gray-100 self-start'}`}>
+                          {isTypingBubble ? (
+                            <View className="flex-row items-center">
+                              <Text className="text-gray-700 mr-2">{typingPrefix}</Text>
+                              <TypingAnimation
+                                dotColor="#999"
+                                dotMargin={6}
+                                dotAmplitude={3}
+                                dotSpeed={0.15}
+                                dotRadius={4}
+                                dotX={6}
+                                dotY={0}
+                              />
+                            </View>
+                          ) : (
+                            <Markdown>{item.text}</Markdown>
+                          )}
+                        </View>
+                      );
+                    }}
+
                 />
               </View>
 
@@ -482,11 +610,17 @@ export default function AddProjectModal({
               </View>
 
               <TouchableOpacity
+                disabled={isLoading}
                 className="mt-4 rounded-full py-3 px-6 w-fit mx-auto bg-[#5E1526]"
                 onPress={handleAddProject}
               >
-                <Text className="text-center text-white font-semibold">+ Add</Text>
+                {isLoading ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text className="text-center text-white font-semibold">+ Add</Text>
+                )}
               </TouchableOpacity>
+
             </>
           )}
         </View>
