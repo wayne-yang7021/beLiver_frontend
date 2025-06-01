@@ -1,6 +1,6 @@
-import { router, useRouter } from 'expo-router';
+import { router, useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Image, NativeScrollEvent, NativeSyntheticEvent, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { AppState, Image, NativeScrollEvent, NativeSyntheticEvent, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSession } from '../context/SessionContext';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000'
@@ -46,7 +46,7 @@ const ProjectRow: React.FC<{
         ))}
         {/* Lighter gray horizontal line across the entire row */}
         <View
-          className="absolute bg-gray-500 h-[0.5]"
+          className="absolute bg-gray-300 h-[0.5]"
           style={{
             top: 24, // Middle of the 48px (h-12) row
             left: 0,
@@ -75,17 +75,17 @@ const ProjectRow: React.FC<{
   const visibleProjectEndIndex = Math.min(lastIndex, visibleEndIndex);
 
   // Calculate the middle index of the visible project portion
-  const visibleMiddleIndex = Math.floor((visibleProjectStartIndex + visibleProjectEndIndex) / 2);
+  // const visibleMiddleIndex = Math.floor((visibleProjectStartIndex + visibleProjectEndIndex) / 2);
 
   // Only show title if there's a visible portion of the project
   const shouldShowTitle = visibleProjectStartIndex <= visibleProjectEndIndex;
-  const titleIndex = shouldShowTitle ? visibleMiddleIndex : -1;
+  // const titleIndex = shouldShowTitle ? visibleMiddleIndex : -1;
 
   return (
     <View className="flex-row h-12 relative">
       {/* Lighter gray horizontal line across entire row (behind everything) */}
       <View
-        className="absolute bg-gray-500 h-[0.5] z-0"
+        className="absolute bg-gray-300 h-[0.5] z-0"
         style={{
           top: 24, // Middle of the 48px (h-12) row
           left: 0,
@@ -176,59 +176,8 @@ export default function Calendar() {
     return datesArray;
   }, []);
 
-  // Add more dates when approaching boundaries (improved infinite scroll)
-  const loadMoreDates = useCallback((direction: 'past' | 'future') => {
-    setDates(prevDates => {
-      const newDates = [...prevDates];
-      
-      if (direction === 'past') {
-        // Add 30 dates to the beginning
-        const firstDate = newDates[0];
-        const datesToAdd = [];
-        for (let i = 30; i > 0; i--) {
-          const date = new Date(firstDate);
-          date.setDate(firstDate.getDate() - i);
-          datesToAdd.push(date);
-        }
-        newDates.unshift(...datesToAdd);
-        
-        // Fetch projects for new range
-        const start = datesToAdd[0];
-        const end = datesToAdd[datesToAdd.length - 1];
-        fetchProjectsForRange(start, end);
-      } else {
-        // Add 30 dates to the end
-        const lastDate = newDates[newDates.length - 1];
-        const datesToAdd = [];
-        for (let i = 1; i <= 30; i++) {
-          const date = new Date(lastDate);
-          date.setDate(lastDate.getDate() + i);
-          datesToAdd.push(date);
-        }
-        newDates.push(...datesToAdd);
-        
-        // Fetch projects for new range
-        const start = datesToAdd[0];
-        const end = datesToAdd[datesToAdd.length - 1];
-        fetchProjectsForRange(start, end);
-      }
-      
-      return newDates;
-    });
-  }, []);
-
-  // Initialize dates
-  useEffect(() => {
-    const initialDates = generateInitialDates();
-    setDates(initialDates);
-  }, [generateInitialDates]);
-
-  const generateDateKey = (date: Date) => {
-    return date.toISOString().slice(0, 10);
-  };
-
   const fetchProjectsForRange = useCallback(
-    async (start: Date, end: Date) => {
+    async (start: Date, end: Date, forceRefresh = false) => {
       if (!session?.token) {
         console.error("No session token found");
         router.push("/login");
@@ -236,7 +185,7 @@ export default function Calendar() {
       }
 
       const rangeKey = `${generateDateKey(start)}-${generateDateKey(end)}`;
-      if (loadedRanges.has(rangeKey)) {
+      if (loadedRanges.has(rangeKey) && !forceRefresh) {
         return; // Already loaded this range
       }
 
@@ -279,12 +228,24 @@ export default function Calendar() {
           endDate: p.end_time ? new Date(p.end_time) : new Date(p.start_time),
         }));
 
-        // Merge with existing projects, avoiding duplicates
-        setProjects(prevProjects => {
-          const existingIds = new Set(prevProjects.map(p => p.id));
-          const uniqueNewProjects = newProjects.filter((p: Project) => !existingIds.has(p.id));
-          return [...prevProjects, ...uniqueNewProjects];
-        });
+        if (forceRefresh) {
+          // Replace projects entirely for this range
+          setProjects(prevProjects => {
+            // Remove old projects from this range and add new ones
+            const filteredProjects = prevProjects.filter(p => 
+              !(p.startDate >= start && p.startDate <= end) && 
+              !(p.endDate >= start && p.endDate <= end)
+            );
+            return [...filteredProjects, ...newProjects];
+          });
+        } else {
+          // Merge with existing projects, avoiding duplicates
+          setProjects(prevProjects => {
+            const existingIds = new Set(prevProjects.map(p => p.id));
+            const uniqueNewProjects = newProjects.filter((p: Project) => !existingIds.has(p.id));
+            return [...prevProjects, ...uniqueNewProjects];
+          });
+        }
 
         setLoadedRanges(prev => new Set([...prev, rangeKey]));
       } catch (err) {
@@ -295,8 +256,95 @@ export default function Calendar() {
         }
       }
     },
-    [session?.token, loadedRanges]
+    [session?.token]
   );
+
+  // Refresh all projects when screen comes into focus
+  const refreshAllProjects = useCallback(async () => {
+    if (dates.length === 0 || !session?.token) return;
+
+    console.log("Refreshing all projects due to screen focus");
+    
+    // Clear loaded ranges to force refresh
+    setLoadedRanges(new Set());
+    
+    // Fetch projects for current date range with force refresh
+    const start = dates[0];
+    const end = dates[dates.length - 1];
+    await fetchProjectsForRange(start, end, true);
+  }, [dates.length, session?.token, fetchProjectsForRange]);
+
+  // Use Expo Router's useFocusEffect to refetch when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log("Calendar screen focused - refreshing projects");
+      refreshAllProjects();
+    }, [refreshAllProjects])
+  );
+
+  // Alternative: Listen to app state changes (when app comes to foreground)
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: string) => {
+      if (nextAppState === 'active') {
+        console.log("App became active - refreshing projects");
+        refreshAllProjects();
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription?.remove();
+  }, [refreshAllProjects]);
+
+  // Add more dates when approaching boundaries (improved infinite scroll)
+  const loadMoreDates = useCallback((direction: 'past' | 'future') => {
+    setDates(prevDates => {
+      const newDates = [...prevDates];
+      
+      if (direction === 'past') {
+        // Add 30 dates to the beginning
+        const firstDate = newDates[0];
+        const datesToAdd = [];
+        for (let i = 30; i > 0; i--) {
+          const date = new Date(firstDate);
+          date.setDate(firstDate.getDate() - i);
+          datesToAdd.push(date);
+        }
+        newDates.unshift(...datesToAdd);
+        
+        // Fetch projects for new range
+        const start = datesToAdd[0];
+        const end = datesToAdd[datesToAdd.length - 1];
+        fetchProjectsForRange(start, end);
+      } else {
+        // Add 30 dates to the end
+        const lastDate = newDates[newDates.length - 1];
+        const datesToAdd = [];
+        for (let i = 1; i <= 30; i++) {
+          const date = new Date(lastDate);
+          date.setDate(lastDate.getDate() + i);
+          datesToAdd.push(date);
+        }
+        newDates.push(...datesToAdd);
+        
+        // Fetch projects for new range
+        const start = datesToAdd[0];
+        const end = datesToAdd[datesToAdd.length - 1];
+        fetchProjectsForRange(start, end);
+      }
+      
+      return newDates;
+    });
+  }, [fetchProjectsForRange]);
+
+  // Initialize dates
+  useEffect(() => {
+    const initialDates = generateInitialDates();
+    setDates(initialDates);
+  }, [generateInitialDates]);
+
+  const generateDateKey = (date: Date) => {
+    return date.toISOString().slice(0, 10);
+  };
 
   // Initial fetch when dates are set
   useEffect(() => {
@@ -424,7 +472,7 @@ const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>
       </View>
 
       {/* Improved Infinite Scrolling Gantt Chart */}
-      <View className='px-2 py-2 flex-1'>
+      <View className='px-4 py-4 flex-1'>
         <ScrollView
           ref={scrollViewRef}
           horizontal
@@ -477,23 +525,24 @@ const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>
 
             {/* Gantt Chart Body - Project Rows */}
             <View className='rounded-2xl px-4 py-4 shadow-sm'>
-              {Array.from({ length: rowCount }).map((_, rowIndex) => (
-                <ProjectRow
-                  key={rowIndex}
+                {Array.from({ length: rowCount }).map((_, rowIndex) => (
+                <View key={rowIndex} className="py-1">
+                  <ProjectRow
                   project={visibleProjects[rowIndex]}
                   dates={dates}
                   columnWidth={COLUMN_WIDTH}
                   scrollX={scrollX}
                   viewWidth={viewWidth}
-                />
-              ))}
+                  />
+                </View>
+                ))}
             </View>
           </View>
         </ScrollView>
       </View>
 
       {isLoading && (
-        <View className="absolute top-4 right-4 bg-gray-800 px-3 py-1 rounded-full">
+        <View className="absolute bottom-4 right-4 bg-gray-800 px-3 py-1 rounded-full z-20">
           <Text className="text-white text-sm">Loading...</Text>
         </View>
       )}

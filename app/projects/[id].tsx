@@ -24,19 +24,6 @@ type Project = {
   estimated_loading: number;
   milestones: Milestone[];
 };
-const mockProject: Project = {
-  project_name: 'SAD Final Project',
-  project_summary: 'System Analysis and Design final project presentation for a real-world information system.',
-  project_start_time: '2025-05-15T09:00:00',
-  project_end_time: '2025-05-30T18:00:00',
-  estimated_loading: 12,
-  milestones: [
-    { milestone_id: 'ms001', milestone_name: 'Milestone #1', ddl: '2025-05-20T18:00:00', progress: 1.0 },
-    { milestone_id: 'ms002', milestone_name: 'Milestone #2', ddl: '2025-05-24T18:00:00', progress: 0.6 },
-    { milestone_id: 'ms003', milestone_name: 'Milestone #3', ddl: '2025-05-27T18:00:00', progress: 0.0 },
-    { milestone_id: 'ms004', milestone_name: 'Milestone #4', ddl: '2025-05-30T18:00:00', progress: 0.0 },
-  ],
-};
 
 export default function ProjectManagementScreen() {
   const { id } = useLocalSearchParams();
@@ -181,19 +168,31 @@ export default function ProjectManagementScreen() {
 
         {/* Circle */}
         <View className="items-center mt-2 mb-6 relative">
-          <Circle 
-            size={240} 
-            progress={project.estimated_loading / 100} 
-            color="#f8c8c3" 
-            thickness={16} 
-            unfilledColor="#eee" 
-            borderWidth={0} 
-            showsText={false} 
+          <Circle
+            size={240}
+            progress={
+              project.estimated_loading > 0
+                ? project.milestones
+                    .reduce((sum, m) => sum + (m.progress * project.estimated_loading), 0) / project.estimated_loading
+                : 0
+            }
+            color="#f8c8c3"
+            thickness={16}
+            unfilledColor="#eee"
+            borderWidth={0}
+            showsText={false}
           />
           <View className="absolute inset-0 items-center justify-center">
-            <Text className="text-gray-600 font-medium">Estimated Loading</Text>
-            <Text className="text-4xl font-bold">{project.estimated_loading}</Text>
-            <Text className="text-sm text-gray-600">Hours</Text>
+            <Text className="text-gray-600 font-medium">Finished Task Hours</Text>
+            <Text className="text-4xl font-bold">
+              {Math.round(
+                project.milestones.reduce(
+                  (sum, m) => sum + (m.progress * project.estimated_loading),
+                  0
+                )
+              )}
+            </Text>
+            <Text className="text-sm text-gray-600">/ {project.estimated_loading} Hours</Text>
           </View>
         </View>
 
