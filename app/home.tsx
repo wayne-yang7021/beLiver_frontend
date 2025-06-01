@@ -3,6 +3,7 @@ import { format, subDays } from 'date-fns';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Dimensions,
   Image,
@@ -46,6 +47,8 @@ export default function HomeScreen() {
   // const [editEtc, setEditEtc] = useState('0'); // 以小時為單位，例如 '1.5'
   const [editDetails, setEditDetails] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
 
   const scrollViewRef = useRef<ScrollView>(null);
   const scrollX = useRef(0);
@@ -58,7 +61,7 @@ export default function HomeScreen() {
   useEffect(() => {
     const fetchTasks = async () => {
       // console.log(`${API_URL}/tasks?date=${selectedDateFormatted}`);
-
+      setIsLoading(true);
       try {
         const response = await fetch(`${API_URL}/tasks?date=${selectedDateFormatted}`, {
           headers: {
@@ -76,6 +79,8 @@ export default function HomeScreen() {
       } catch (err) {
         console.error(err);
         Alert.alert('Error', 'Failed to load tasks');
+      } finally {
+        setIsLoading(false); // <-- 載入結束
       }
     };
 
@@ -252,8 +257,12 @@ export default function HomeScreen() {
         </View>
 
         <ScrollView className="px-6 mt-4 mb-6">
-          {filteredTasks.length === 0 ? (
-            <View className="items-center justify-center py-8">
+          {isLoading ? (
+            <View className="items-center justify-center py-10">
+              <ActivityIndicator size="large" color="#F29389" />
+            </View>
+          ) : filteredTasks.length === 0 ? (
+            <View className="items-center justify-center py-10">
               <Text className="text-gray-500 text-lg">No tasks for this date</Text>
             </View>
           ) : (

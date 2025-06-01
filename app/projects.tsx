@@ -95,7 +95,10 @@ export default function Projects() {
             position: 'absolute',
             top: '50%',
             left: `${progress * 100}%`,
-            transform: [{ translateX: -12 }, { translateY: -12 }],
+            transform: [
+              { translateX: progress < 0.1 ? 0 : progress > 0.9 ? -screenWidth * 0.8 : -12 }, // 自動調整氣泡偏移
+              { translateY: -12 },
+            ],
             zIndex: 2,
             alignItems: 'center',
           }}
