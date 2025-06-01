@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Dimensions, FlatList, Image, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Dimensions, FlatList, Image, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AddProjectModal from '../components/AddProjectModal';
 import { useSession } from '../context/SessionContext';
@@ -28,9 +28,12 @@ export default function Projects() {
   const { session } = useSession();
   const [projects, setProjects] = useState<Project[]>([]);
   const insets = useSafeAreaInsets();
+  const [loading, setLoading] = useState(true); // 加這行
+
 
   const fetchProjects = async () => {
     try {
+      setLoading(true); // 開始載入
       const response = await fetch(`${API_URL}/projects`, {
         headers: {
           'Authorization': `Bearer ${session?.token}`,
@@ -45,7 +48,10 @@ export default function Projects() {
     } catch (err) {
       console.error(err);
       Alert.alert('Error', 'Failed to load projects');
+    } finally {
+      setLoading(false); // 載入結束
     }
+    
   };
   
 
@@ -73,7 +79,7 @@ export default function Projects() {
   const screenWidth = Dimensions.get('window').width;
   const renderProgressBar = (currentTask: string, progress: number) => {
     const showCurrentTask = progress < 1;
-
+    // console.log("Current Task: ", currentTask, ", progress: ", progress);
     return (
       <View className="mt-6 w-full h-14 relative">
         {/* 背景條 */}
@@ -96,7 +102,7 @@ export default function Projects() {
             top: '50%',
             left: `${progress * 100}%`,
             transform: [
-              { translateX: progress < 0.1 ? 0 : progress > 0.9 ? -screenWidth * 0.8 : -12 }, // 自動調整氣泡偏移
+              { translateX: progress < 0.1 ? 0 : progress > 0.9 ? -screenWidth * 0.02 : -12 }, // 自動調整氣泡偏移
               { translateY: -12 },
             ],
             zIndex: 2,
@@ -201,16 +207,28 @@ export default function Projects() {
       </View>
 
       <View style={{ flex: 1 }} className="px-6 mt-6">
+         {loading ? (
+          <View className="flex-1 justify-center items-center">
+            <ActivityIndicator size="large" color="#B43C4C" />
+            <Text className="mt-4 text-red-900 font-semibold">載入中...</Text>
+          </View>
+        ) : (
         <FlatList
           data={[...projects].sort((a, b) => {
-                  const today = new Date().toISOString().split('T')[0];
-                  const isADoneAndNotOverdue = a.progress === 1 && a.due_date > today;
-                  const isBDoneAndNotOverdue = b.progress === 1 && b.due_date > today;
+              // const today = new Date().toISOString().split('T')[0];
+              const isADone = a.progress === 1;
+              const isBDone = b.progress === 1;
 
-                  if (isADoneAndNotOverdue && !isBDoneAndNotOverdue) return 1;
-                  if (!isADoneAndNotOverdue && isBDoneAndNotOverdue) return -1;
-                  return 0;
-                })}
+              // 完成的永遠在最下面
+              if (isADone && !isBDone) return 1;
+              if (!isADone && isBDone) return -1;
+
+              // 都沒完成，按截止日由近到遠排序
+              const dateA = new Date(a.due_date);
+              const dateB = new Date(b.due_date);
+              return dateA.getTime() - dateB.getTime();
+            })}
+
           renderItem={({ item }) => (
             <TouchableOpacity
               onPress={() => router.push(`./projects/${item.project_id}`)}
@@ -227,11 +245,13 @@ export default function Projects() {
           keyExtractor={item => item.project_id}
           contentContainerStyle={{ paddingBottom: 100 }}
         />
+        )}
       </View>
 
       <TouchableOpacity onPress={() => handleAddProject()} className="absolute bottom-6 right-6 w-14 h-14 bg-red-900 rounded-full items-center justify-center">
         <Text className="text-white text-2xl">+</Text>
       </TouchableOpacity>
+      
 
       <AddProjectModal projectId={modalProjectId} visible={modalVisible} onClose={() => setModalVisible(false)} />
     </View>

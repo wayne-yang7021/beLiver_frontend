@@ -37,14 +37,11 @@ export default function HomeScreen() {
   const router = useRouter();
   const { session } = useSession();
   const [tasks, setTasks] = useState<Task[]>([]);
-
   const [selectedDateIndex, setSelectedDateIndex] = useState(30);
   const [editVisible, setEditVisible] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editEtc, setEditEtc] = useState(0);
-  // const [editEtcUnit, setEditEtcUnit] = useState<'mins' | 'hrs'>('mins');
-  // const [editEtc, setEditEtc] = useState('0'); // 以小時為單位，例如 '1.5'
   const [editDetails, setEditDetails] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -229,11 +226,17 @@ export default function HomeScreen() {
             <TouchableOpacity key={index} className="mx-2 items-center justify-center" onPress={() => setSelectedDateIndex(index)}>
               <View className={`w-16 h-16 rounded-full flex items-center justify-center ${selectedDateIndex === index ? 'bg-[#F29389]' : 'bg-white'}`}>
                 {index === 30 ? (
-                  <Text className={`text-center font-bold ${selectedDateIndex === index ? 'text-white' : 'text-[#F29389]'}`}>Today</Text>
+                  <Text className={`text-center font-bold ${selectedDateIndex === index ? 'text-white' : 'text-[#F29389]'}`}>
+                    Today
+                  </Text>
                 ) : (
                   <>
-                    <Text className={`text-center font-bold ${selectedDateIndex === index ? 'text-white' : 'text-[#F29389]'}`}>{date.toLocaleString('default', { month: 'short' })}</Text>
-                    <Text className={`text-center font-bold ${selectedDateIndex === index ? 'text-white' : 'text-[#F29389]'}`}>{date.getDate()}</Text>
+                    <Text className={`text-center font-bold ${selectedDateIndex === index ? 'text-white' : 'text-[#F29389]'}`}>
+                      {date.toLocaleString('default', { month: 'short' })}
+                    </Text>
+                    <Text className={`text-center font-bold ${selectedDateIndex === index ? 'text-white' : 'text-[#F29389]'}`}>
+                      {date.getDate()}
+                    </Text>
                   </>
                 )}
               </View>
@@ -354,9 +357,9 @@ export default function HomeScreen() {
                       editEtc === val ? 'bg-[#F29389] border-[#F29389]' : 'bg-white border-gray-300'
                     } mr-2`}
                     >
-                    <Text className={`font-semibold ${editEtc === val ? 'text-white' : 'text-gray-700'}`}>
-                      {val}
-                    </Text>
+                      <Text className={`font-semibold ${editEtc === val ? 'text-white' : 'text-gray-700'}`}>
+                        {val}
+                      </Text>
                     </TouchableOpacity>
                   ))}
                   </ScrollView>

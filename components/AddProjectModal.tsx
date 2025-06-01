@@ -109,6 +109,7 @@ export default function AddProjectModal({
   }, [title, projectId]);
 
   useEffect(() => {
+    // console.log(deadline);
     if (deadline) storage.set(`deadline-${projectId}`, deadline.toISOString());
   }, [deadline, projectId]);
 
@@ -123,11 +124,13 @@ export default function AddProjectModal({
 
   const pickDocument = async () => {
     setIsLoading(true);
+
     try {
+      await storage.remove(`chat-${projectId}`); // Remove 'chat-{projectId}'
       const result = await DocumentPicker.getDocumentAsync({ multiple: false });
       // console.log(result);
       if (result.canceled || !result.assets?.length) return;
-      
+
       const file = result.assets[0];
       setFiles(prev => [...prev, file]);
 
@@ -341,7 +344,7 @@ export default function AddProjectModal({
 
 
   const clearProjectStorage = async (id: string) => {
-    const keys = ['project', 'deadline', 'chat', 'files'];
+    const keys = ['project', 'deadline', 'chat', 'files', 'json'];
     for (const key of keys) {
       await storage.remove(`${key}-${id}`);
     }
@@ -395,6 +398,9 @@ export default function AddProjectModal({
         name: file.name,
         type: file.mimeType || 'application/pdf',
       } as any);
+
+      formData.append('title', title);
+      formData.append('deadline', deadline ? deadline.toISOString() : '');
 
       const res = await fetch(`${API_URL}/assistant/project_draft`, {
         method: 'POST',
@@ -572,10 +578,10 @@ export default function AddProjectModal({
                       const isTypingBubble = item.from === 'bot' && item.text === '';
 
                       return (
-                        <View className={`rounded-xl px-4 py-2 mb-2 max-w-[80%] ${item.from === 'user' ? 'bg-[#F29389] self-end' : 'bg-gray-100 self-start'}`}>
-                          {isTypingBubble ? (
-                            <View className="flex-row items-center">
-                              <Text className="text-gray-700 mr-2">{typingPrefix}</Text>
+                        <View className={`rounded-xl px-4 py-2 mb-2 max-w-[80%] min-h-[40px] min-w-[60px] justify-center ${item.from === 'user' ? 'bg-[#F29389] self-end' : 'bg-gray-100 self-start'}`}>
+                          {isTyping && item.from === 'bot' ? (
+                            <View className="flex-row items-center pb-2 pl-1">
+                              <Text className="text-gray-700">{typingPrefix}</Text>
                               <TypingAnimation
                                 dotColor="#999"
                                 dotMargin={6}
