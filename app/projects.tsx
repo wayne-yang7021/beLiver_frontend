@@ -158,7 +158,20 @@ export default function Projects() {
 
           {/* 完成狀態 */}
           {!showCurrentTask && (
-            <Text style={{ position: 'absolute', bottom: 30, fontSize: 12, color: '#666', marginTop: 4 }}> Done</Text>
+            <Text
+              style={{
+                position: 'absolute',
+                bottom: 30,
+                fontSize: 12,
+                color: '#666',
+                marginTop: 4,
+                maxWidth: screenWidth * 0.5,
+              }}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              Done
+            </Text>
           )}
         </View>
       </View>
@@ -186,7 +199,15 @@ export default function Projects() {
 
       <View style={{ flex: 1 }} className="px-6 mt-6">
         <FlatList
-          data={projects}
+          data={[...projects].sort((a, b) => {
+                  const today = new Date().toISOString().split('T')[0];
+                  const isADoneAndNotOverdue = a.progress === 1 && a.due_date > today;
+                  const isBDoneAndNotOverdue = b.progress === 1 && b.due_date > today;
+
+                  if (isADoneAndNotOverdue && !isBDoneAndNotOverdue) return 1;
+                  if (!isADoneAndNotOverdue && isBDoneAndNotOverdue) return -1;
+                  return 0;
+                })}
           renderItem={({ item }) => (
             <TouchableOpacity
               onPress={() => router.push(`./projects/${item.project_id}`)}
