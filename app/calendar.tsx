@@ -1,6 +1,6 @@
 import { router, useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, Image, NativeScrollEvent, NativeSyntheticEvent, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Image, NativeScrollEvent, NativeSyntheticEvent, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useSession } from '../context/SessionContext';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000'
@@ -281,19 +281,6 @@ export default function Calendar() {
       refreshAllProjects();
     }, [refreshAllProjects])
   );
-
-  // Alternative: Listen to app state changes (when app comes to foreground)
-  useEffect(() => {
-    const handleAppStateChange = (nextAppState: string) => {
-      if (nextAppState === 'active') {
-        console.log("App became active - refreshing projects");
-        refreshAllProjects();
-      }
-    };
-
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
-    return () => subscription?.remove();
-  }, [refreshAllProjects]);
 
   // Add more dates when approaching boundaries (improved infinite scroll)
   const loadMoreDates = useCallback((direction: 'past' | 'future') => {
