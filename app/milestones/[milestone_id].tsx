@@ -486,7 +486,7 @@ export default function MilestoneDetailScreen() {
                     />
                 </View>
             ) : (
-                <Text>{deadline.toDateString()}</Text>
+                <Text>{deadline.toISOString().slice(0, 10)}</Text>
             )}
             </View>
           </View>
@@ -665,8 +665,8 @@ export default function MilestoneDetailScreen() {
                       mode="date"
                       display={Platform.OS === 'ios' ? 'compact' : 'default'}
                       onChange={(event, date) => setModalTaskDeadline(date || new Date())}
-                      minimumDate={new Date(new Date().setHours(0, 0, 0, 0))}
-                      maximumDate={deadline}
+                      // minimumDate={new Date(new Date().setHours(0, 0, 0, 0))}
+                      // maximumDate={deadline}
                     />
                   </View>
                 </View>
