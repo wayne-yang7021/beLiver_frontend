@@ -9,6 +9,9 @@
         "./*"
       ]
     },
+    "types": ["jest"],
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true
   },
   "include": [
     "**/*.ts",
@@ -16,5 +19,7 @@
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
     "nativewind-env.d.ts"
-  ]
+  ],
+  // "exclude": ["node_modules/react-native-reanimated"]
+
 }

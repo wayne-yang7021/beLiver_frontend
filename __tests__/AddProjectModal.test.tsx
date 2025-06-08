@@ -1,4 +1,3 @@
-// AddProjectModal.test.tsx
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import AddProjectModal from '../components/AddProjectModal';
@@ -42,13 +41,11 @@ describe('AddProjectModal', () => {
   });
 
   it('uploads document and displays file name', async () => {
-    const { getByText, queryByText } = render(
+    const { getByTestId, queryByText } = render(
       <AddProjectModal visible={true} onClose={() => {}} />
     );
 
-    fireEvent.press(
-      getByText('+ Upload your project requirements file (.docx or .pdf)')
-    );
+    fireEvent.press(getByTestId('upload-button'));
 
     await waitFor(() => {
       expect(queryByText('test.pdf')).toBeTruthy();

@@ -172,6 +172,7 @@ export default function AddProjectModal({
 
           {/* Upload File Button */}
           <TouchableOpacity
+            testID="upload-button" // for testing (used in AddProjectModal.test.tsx)
             className="mt-4 p-4 rounded-xl border border-dashed border-[#F29389] bg-[#F8C8C3] bg-opacity-20 gap-2"
             onPress={pickDocument}
           >
